@@ -11,9 +11,13 @@ const Index = () => {
       <Header />
       <main className="flex-1 flex gap-4 p-4 pt-28">
         <EditorProvider>
-          <div className="flex-[2] flex flex-col gap-4">
+          <div className="flex-[2] flex flex-col gap-4 min-h-0">
+            <div className="flex-[3] min-h-0">
               <VideoPreview />
+            </div>
+            <div className="flex-[2] min-h-0">
               <Timeline />
+            </div>
           </div>
           <div className="flex-[1] flex flex-col">
               <MediaLibrary />

@@ -51,7 +51,7 @@ const VideoPreview = () => {
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] flex-1">
+    <div className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
       <div className="bg-black flex items-center justify-center relative group overflow-hidden">
         {selectedClip ? (
             <video
@@ -64,11 +64,13 @@ const VideoPreview = () => {
                 onClick={togglePlay}
             />
         ) : (
-            <img
-            src="https://images.unsplash.com/photo-1605810230434-7631ac76ec81?q=80&w=2000&auto=format&fit=crop"
-            alt="Video preview"
-            className="w-full h-full object-cover"
-            />
+            <div className="w-full h-full flex items-center justify-center">
+              <img
+                src="/lovable-uploads/68782036-637d-4eae-9d56-aeb41156f0bd.png"
+                alt="RVJ Logo"
+                className="w-1/2 h-1/2 object-contain"
+              />
+            </div>
         )}
         {selectedClip && !isPlaying && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">

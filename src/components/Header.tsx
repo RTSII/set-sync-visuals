@@ -1,5 +1,5 @@
 
-import { Settings, UserCircle } from 'lucide-react';
+import { Settings, UserCircle, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Header = () => {
@@ -8,6 +8,9 @@ const Header = () => {
       <div className="container mx-auto px-4 h-24 flex items-center justify-center relative">
         <img src="/lovable-uploads/68782036-637d-4eae-9d56-aeb41156f0bd.png" alt="RVJ Logo" className="h-20 w-auto" />
         <div className="flex items-center gap-4 absolute right-4">
+          <Button variant="ghost" size="icon">
+            <Share2 className="h-5 w-5" />
+          </Button>
           <Button variant="ghost" size="icon">
             <Settings className="h-5 w-5" />
           </Button>

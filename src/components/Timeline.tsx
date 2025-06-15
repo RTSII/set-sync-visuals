@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Scissors, Plus, Minus, AudioWaveform, Video, Download, Loader2, GitMerge, MapPin } from "lucide-react";
@@ -188,7 +189,7 @@ const Timeline = () => {
   const playheadPosition = duration > 0 ? `${(currentTime / duration) * 100}%` : '0%';
 
   return (
-    <Card className="flex flex-col flex-1">
+    <Card className="flex flex-col h-full">
       {audioSrc && <audio ref={audioRef} src={audioSrc} />}
       <div className="p-2 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
