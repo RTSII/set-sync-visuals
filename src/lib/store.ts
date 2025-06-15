@@ -1,9 +1,10 @@
 import { create } from 'zustand';
-import { MediaClip } from '@/types';
+import { MediaClip, Transition } from '@/types';
 
 interface EditorState {
   timelineClips: MediaClip[];
   setTimelineClips: (clips: MediaClip[] | ((clips: MediaClip[]) => MediaClip[])) => void;
+  updateClip: (clipId: string, newProps: Partial<MediaClip>) => void;
   addClipToTimeline: (clip: MediaClip) => void;
   
   isPlaying: boolean;
@@ -23,6 +24,15 @@ interface EditorState {
   
   audioFile: File | null;
   setAudioFile: (file: File | null) => void;
+  
+  audioMarkers: number[];
+  setAudioMarkers: (updater) => set(state => ({ audioMarkers: typeof updater === 'function' ? updater(state.audioMarkers) : updater })),
+  addAudioMarker: (time: number) => {
+    // Avoid duplicate markers at the same spot
+    if (!get().audioMarkers.some(m => Math.abs(m - time) < 0.1)) {
+      set(state => ({ audioMarkers: [...state.audioMarkers, time].sort((a, b) => a - b) }));
+    }
+  };
 
   waveform: number[];
   setWaveform: (data: number[]) => void;
@@ -42,6 +52,11 @@ interface EditorState {
 export const useEditorStore = create<EditorState>((set, get) => ({
   timelineClips: [],
   setTimelineClips: (updater) => set(state => ({ timelineClips: typeof updater === 'function' ? updater(state.timelineClips) : updater })),
+  updateClip: (clipId, newProps) => set(state => ({
+    timelineClips: state.timelineClips.map(clip => 
+      clip.id === clipId ? { ...clip, ...newProps } : clip
+    )
+  })),
   addClipToTimeline: (clip) => {
     if (!get().timelineClips.find(c => c.id === clip.id)) {
       set(state => {
@@ -72,6 +87,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   audioFile: null,
   setAudioFile: (file) => set({ audioFile: file }),
+
+  audioMarkers: [],
+  setAudioMarkers: (updater) => set(state => ({ audioMarkers: typeof updater === 'function' ? updater(state.audioMarkers) : updater })),
+  addAudioMarker: (time) => {
+    // Avoid duplicate markers at the same spot
+    if (!get().audioMarkers.some(m => Math.abs(m - time) < 0.1)) {
+      set(state => ({ audioMarkers: [...state.audioMarkers, time].sort((a, b) => a - b) }));
+    }
+  },
 
   waveform: [],
   setWaveform: (data) => set({ waveform: data }),
