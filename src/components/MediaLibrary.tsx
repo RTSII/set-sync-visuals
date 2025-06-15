@@ -1,10 +1,12 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UploadCloud, Search, Plus, Music } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
-import { useEditor, MediaClip } from "@/context/EditorContext";
+import { useEditorStore } from "@/lib/store";
+import { MediaClip } from "@/types";
 
 const MediaLibrary = () => {
   const [mediaClips, setMediaClips] = useState<MediaClip[]>([]);
@@ -12,7 +14,7 @@ const MediaLibrary = () => {
   const audioInputRef = useRef<HTMLInputElement>(null);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
-  const { addClipToTimeline, loadAudio } = useEditor();
+  const { addClipToTimeline, loadAudio } = useEditorStore();
 
   const handleUploadVideoClick = () => {
     videoInputRef.current?.click();

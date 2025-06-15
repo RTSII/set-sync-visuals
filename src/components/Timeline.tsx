@@ -4,9 +4,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Scissors, Plus, Minus, AudioWaveform, Video } from "lucide-react";
 import React, { useRef, useEffect } from "react";
 import { useEditor } from "@/context/EditorContext";
+import { useEditorStore } from "@/lib/store";
 
 const Timeline = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { audioRef } = useEditor();
   const { 
     timelineClips, 
     setTimelineClips, 
@@ -16,9 +18,8 @@ const Timeline = () => {
     currentTime,
     duration,
     audioSrc,
-    audioRef,
     waveform,
-  } = useEditor();
+  } = useEditorStore();
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 

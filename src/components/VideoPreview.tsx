@@ -2,24 +2,28 @@
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
+import { useEditorStore } from "@/lib/store";
 import React from 'react';
 
 const VideoPreview = () => {
   const { 
-    selectedClip, 
     videoRef, 
-    isPlaying, 
     togglePlay,
     jumpToStart,
     jumpToEnd,
     handleClipEnded,
+  } = useEditor();
+
+  const {
+    selectedClip, 
+    isPlaying, 
     currentTime,
     setCurrentTime,
     duration,
     setDuration,
     wasPlaying,
     setWasPlaying,
-  } = useEditor();
+  } = useEditorStore();
 
   const handleTimeUpdate = () => {
     if (videoRef.current) {
