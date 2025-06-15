@@ -36,11 +36,16 @@ export async function exportVideo({
 
   // --- Step 1: Write all necessary source files to FFmpeg's virtual filesystem ---
   await ffmpeg.writeFile(audioFile.name, await fetchFile(audioFile));
+  
+  const uniqueClipFiles = new Map<string, File>();
   for (const clip of timelineClips) {
-    // Avoid writing the same file multiple times if it's used more than once in the timeline
-    if (!(await ffmpeg.exists(clip.file.name))) {
-       await ffmpeg.writeFile(clip.file.name, await fetchFile(clip.file));
+    if (!uniqueClipFiles.has(clip.file.name)) {
+      uniqueClipFiles.set(clip.file.name, clip.file);
     }
+  }
+
+  for (const [name, file] of uniqueClipFiles.entries()) {
+    await ffmpeg.writeFile(name, await fetchFile(file));
   }
 
   // --- Step 2: Trim each video clip according to its start/end times ---

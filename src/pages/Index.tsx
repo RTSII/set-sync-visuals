@@ -14,7 +14,7 @@ const Index = () => {
   return (
     <div className="h-screen bg-background font-sans text-foreground flex flex-col">
       <Header />
-      <main className="flex-1 flex flex-col p-4 pt-28">
+      <main className="flex-1 flex flex-col pt-28 px-4 pb-4">
         <EditorProvider>
           <ResizablePanelGroup
             direction="horizontal"
