@@ -84,7 +84,7 @@ const Timeline = () => {
   const playheadPosition = duration > 0 ? `${(currentTime / duration) * 100}%` : '0%';
 
   return (
-    <Card className="flex-1 flex flex-col flex-[1]">
+    <Card className="flex flex-col flex-1">
       {audioSrc && <audio ref={audioRef} src={audioSrc} />}
       <div className="p-2 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">

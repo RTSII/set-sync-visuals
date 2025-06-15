@@ -15,6 +15,8 @@ interface EditorContextType {
   // Playback State
   isPlaying: boolean;
   togglePlay: () => void;
+  jumpToStart: () => void;
+  jumpToEnd: () => void;
   handleClipEnded: () => void;
   currentTime: number;
   setCurrentTime: React.Dispatch<React.SetStateAction<number>>;
@@ -126,6 +128,27 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const jumpToStart = () => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      setCurrentTime(0);
+    }
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+    }
+  };
+
+  const jumpToEnd = () => {
+    if (videoRef.current) {
+      const newTime = videoRef.current.duration;
+      videoRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+      if (audioRef.current) {
+        audioRef.current.currentTime = newTime;
+      }
+    }
+  };
+
   const handleClipEnded = () => {
     if (!selectedClip) return;
     
@@ -161,6 +184,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     setTimelineClips,
     isPlaying,
     togglePlay,
+    jumpToStart,
+    jumpToEnd,
     handleClipEnded,
     currentTime,
     setCurrentTime,

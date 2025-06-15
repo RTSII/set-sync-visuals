@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
@@ -9,6 +10,8 @@ const VideoPreview = () => {
     videoRef, 
     isPlaying, 
     togglePlay,
+    jumpToStart,
+    jumpToEnd,
     handleClipEnded,
     currentTime,
     setCurrentTime,
@@ -44,8 +47,8 @@ const VideoPreview = () => {
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden flex flex-col flex-[1]">
-      <div className="flex-1 bg-black flex items-center justify-center relative group">
+    <div className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] flex-1">
+      <div className="bg-black flex items-center justify-center relative group overflow-hidden">
         {selectedClip ? (
             <video
                 ref={videoRef}
@@ -73,11 +76,11 @@ const VideoPreview = () => {
       </div>
       <div className="p-2 bg-secondary/20 border-t border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon"><Rewind className="h-5 w-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={jumpToStart}><Rewind className="h-5 w-5" /></Button>
           <Button variant="ghost" size="icon" onClick={togglePlay}>
             {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
           </Button>
-          <Button variant="ghost" size="icon"><FastForward className="h-5 w-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={jumpToEnd}><FastForward className="h-5 w-5" /></Button>
         </div>
         <div className="flex-1 mx-4">
             <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
