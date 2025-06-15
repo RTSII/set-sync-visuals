@@ -2,11 +2,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Scissors, Plus, Minus, AudioWaveform, Video, Upload } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
+import { useEditor } from "@/context/EditorContext";
 
 const Timeline = () => {
   const [waveform, setWaveform] = useState<number[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { timelineClips, setTimelineClips, addClipToTimeline } = useEditor();
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -69,6 +73,34 @@ const Timeline = () => {
     }
   }, [waveform]);
 
+  const handleDropOnTimeline = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const clipData = e.dataTransfer.getData("application/rvj-clip");
+    if (clipData) {
+        try {
+            const clip = JSON.parse(clipData);
+            addClipToTimeline(clip);
+        } catch (error) {
+            console.error("Failed to parse clip data on drop", error);
+        }
+    }
+  };
+
+  const handleTimelineDragSort = () => {
+    if (dragItem.current === null || dragOverItem.current === null || dragItem.current === dragOverItem.current) return;
+
+    setTimelineClips(prevClips => {
+        const newClips = [...prevClips];
+        const draggedItemContent = newClips.splice(dragItem.current!, 1)[0];
+        if (draggedItemContent) {
+            newClips.splice(dragOverItem.current!, 0, draggedItemContent);
+        }
+        dragItem.current = null;
+        dragOverItem.current = null;
+        return newClips;
+    });
+  };
+
   return (
     <Card className="flex-1 flex flex-col">
       <div className="p-2 border-b border-border flex items-center justify-between">
@@ -89,7 +121,11 @@ const Timeline = () => {
         </div>
       </div>
       <CardContent className="p-4 flex-1 overflow-x-auto">
-        <div className="relative min-w-[1200px]">
+        <div 
+          className="relative min-w-[1200px]"
+          onDrop={handleDropOnTimeline}
+          onDragOver={(e) => e.preventDefault()}
+        >
             {/* Timeline Ruler */}
             <div className="h-6 flex items-center text-xs text-muted-foreground mb-2">
                 {Array.from({length: 12}).map((_, i) => (
@@ -125,9 +161,24 @@ const Timeline = () => {
                     <div className="w-8 h-full flex items-center justify-center bg-muted rounded">
                         <Video className="h-5 w-5 text-foreground"/>
                     </div>
-                    <div className="flex-1 h-full relative">
-                        <div className="absolute top-0 h-full w-1/4 bg-blue-400/50 rounded-md border border-blue-300" style={{left: '10%'}}></div>
-                        <div className="absolute top-0 h-full w-1/3 bg-purple-400/50 rounded-md border border-purple-300" style={{left: '40%'}}></div>
+                    <div className="flex-1 h-full flex items-center gap-1">
+                        {timelineClips.map((clip, index) => (
+                           <div
+                             key={clip.id}
+                             className="h-full aspect-video rounded-md relative overflow-hidden cursor-grab active:cursor-grabbing group"
+                             draggable
+                             onDragStart={() => (dragItem.current = index)}
+                             onDragEnter={() => (dragOverItem.current = index)}
+                             onDragEnd={handleTimelineDragSort}
+                             onDragOver={(e) => e.stopPropagation()}
+                           >
+                            <video src={clip.src} className="w-full h-full object-cover pointer-events-none" muted />
+                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                            <p className="absolute bottom-1 left-1 text-xs text-white bg-black/50 px-1 rounded-sm truncate pointer-events-none max-w-full">
+                                {clip.file.name}
+                            </p>
+                           </div> 
+                        ))}
                     </div>
                 </div>
             </div>

@@ -1,21 +1,18 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UploadCloud, Search } from "lucide-react";
+import { UploadCloud, Search, Plus } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
-
-type MediaClip = {
-  id: string;
-  src: string;
-  file: File;
-};
+import { useEditor, MediaClip } from "@/context/EditorContext";
 
 const MediaLibrary = () => {
   const [mediaClips, setMediaClips] = useState<MediaClip[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
+  const { addClipToTimeline } = useEditor();
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -59,6 +56,12 @@ const MediaLibrary = () => {
     });
   };
 
+  const handleClipDragStart = (e: React.DragEvent<HTMLDivElement>, clip: MediaClip, index: number) => {
+    dragItem.current = index;
+    // Set data for dropping into the timeline
+    e.dataTransfer.setData("application/rvj-clip", JSON.stringify(clip));
+  };
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
@@ -82,12 +85,17 @@ const MediaLibrary = () => {
                             key={clip.id} 
                             className="aspect-video rounded-md overflow-hidden cursor-grab ring-offset-background ring-primary focus-visible:ring-2 focus-visible:ring-offset-2 relative group active:cursor-grabbing"
                             draggable
-                            onDragStart={() => (dragItem.current = index)}
+                            onDragStart={(e) => handleClipDragStart(e, clip, index)}
                             onDragEnter={() => (dragOverItem.current = index)}
                             onDragEnd={handleDragSort}
                             onDragOver={(e) => e.preventDefault()}
                         >
                             <video src={clip.src} className="w-full h-full object-cover pointer-events-none" muted loop autoPlay playsInline/>
+                            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 rounded-full">
+                                <Button size="icon" variant="ghost" className="h-7 w-7 text-white hover:bg-white/20 hover:text-white" onClick={() => addClipToTimeline(clip)}>
+                                    <Plus className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </div>
                     ))}
                 </div>
