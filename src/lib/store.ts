@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { MediaClip, Transition } from '@/types';
 
@@ -5,7 +6,7 @@ interface EditorState {
   timelineClips: MediaClip[];
   setTimelineClips: (clips: MediaClip[] | ((clips: MediaClip[]) => MediaClip[])) => void;
   updateClip: (clipId: string, newProps: Partial<MediaClip>) => void;
-  addClipToTimeline: (clip: MediaClip) => void;
+  addClipToTimeline: (clip: Omit<MediaClip, 'startTime' | 'endTime' | 'originalDuration' | 'transition'>) => void;
   
   isPlaying: boolean;
   setIsPlaying: (isPlaying: boolean) => void;
@@ -40,6 +41,9 @@ interface EditorState {
 
   exportProgress: number;
   setExportProgress: (progress: number) => void;
+
+  trimmingClipId: string | null;
+  setTrimmingClipId: (id: string | null) => void;
   
   loadAudio: (file: File) => Promise<void>;
 }
@@ -55,10 +59,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   addClipToTimeline: (clip) => {
     if (!get().timelineClips.find(c => c.id === clip.id)) {
       set(state => {
-        const newClips = [...state.timelineClips, clip];
+        const newClip: MediaClip = {
+          ...clip,
+          startTime: 0,
+          endTime: 0, // Will be updated on video load
+          originalDuration: 0, // Will be updated on video load
+        };
+        const newClips = [...state.timelineClips, newClip];
         // If this is the first clip, select it automatically
         if (newClips.length === 1) {
-          return { timelineClips: newClips, selectedClip: clip };
+          return { timelineClips: newClips, selectedClip: newClip };
         }
         return { timelineClips: newClips };
       });
@@ -75,7 +85,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setDuration: (duration) => set({ duration }),
 
   selectedClip: null,
-  setSelectedClip: (clip) => set({ selectedClip: clip }),
+  setSelectedClip: (clip) => set({ selectedClip: clip, trimmingClipId: null }),
 
   audioSrc: null,
   setAudioSrc: (src) => set({ audioSrc: src }),
@@ -97,13 +107,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   
   wasPlaying: false,
   setWasPlaying: (wasPlaying) => set({ wasPlaying }),
-
+  
   isExporting: false,
   setIsExporting: (isExporting: boolean) => set({ isExporting }),
 
   exportProgress: 0,
   setExportProgress: (progress: number) => set({ exportProgress: progress }),
   
+  trimmingClipId: null,
+  setTrimmingClipId: (id) => set({ trimmingClipId: id }),
+
   loadAudio: async (file: File) => {
     get().setAudioFile(file); // Store the raw file for export
     const objectUrl = URL.createObjectURL(file);

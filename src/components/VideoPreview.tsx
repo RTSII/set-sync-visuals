@@ -9,8 +9,6 @@ const VideoPreview = () => {
   const { 
     videoRef, 
     togglePlay,
-    jumpToStart,
-    jumpToEnd,
     handleClipEnded,
   } = useEditor();
 
@@ -19,36 +17,78 @@ const VideoPreview = () => {
     isPlaying, 
     currentTime,
     setCurrentTime,
-    duration,
-    setDuration,
     wasPlaying,
     setWasPlaying,
+    updateClip,
   } = useEditorStore();
 
-  const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
-    }
-  };
+  const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
 
-  const handleLoadedMetadata = () => {
-    if (videoRef.current) {
-      setDuration(videoRef.current.duration);
-      if (wasPlaying) {
-        videoRef.current.play().catch(e => console.error("Autoplay failed", e));
-        setWasPlaying(false);
+  const handleTimeUpdate = () => {
+    if (videoRef.current && selectedClip) {
+      const absoluteTime = videoRef.current.currentTime;
+      if (absoluteTime >= selectedClip.endTime) {
+        videoRef.current.pause();
+        setCurrentTime(clipDisplayDuration);
+        handleClipEnded();
+      } else {
+        setCurrentTime(absoluteTime - selectedClip.startTime);
       }
     }
   };
 
+  const handleLoadedMetadata = () => {
+    if (videoRef.current && selectedClip) {
+      const videoDuration = videoRef.current.duration;
+      // If clip just added, populate its duration properties
+      if (selectedClip.originalDuration === 0) {
+        updateClip(selectedClip.id, {
+          startTime: 0,
+          endTime: videoDuration,
+          originalDuration: videoDuration,
+        });
+      } else {
+        // For subsequent loads of an already-initialized clip
+        videoRef.current.currentTime = selectedClip.startTime;
+        setClipDisplayDuration(selectedClip.endTime - selectedClip.startTime);
+        setCurrentTime(0); // Reset playhead for this clip
+        if (wasPlaying) {
+          videoRef.current.play().catch(e => console.error("Autoplay failed", e));
+          setWasPlaying(false);
+        }
+      }
+    }
+  };
+
+  React.useEffect(() => {
+    // Effect to react to store updates from handleLoadedMetadata
+    if (videoRef.current && selectedClip && selectedClip.originalDuration > 0) {
+      videoRef.current.currentTime = selectedClip.startTime;
+      setClipDisplayDuration(selectedClip.endTime - selectedClip.startTime);
+      setCurrentTime(0);
+    }
+  }, [selectedClip?.id, selectedClip?.endTime, selectedClip?.startTime]);
+
+  const jumpToStart = () => {
+    if (videoRef.current && selectedClip) {
+      videoRef.current.currentTime = selectedClip.startTime;
+    }
+  };
+
+  const jumpToEnd = () => {
+    if (videoRef.current && selectedClip) {
+      videoRef.current.currentTime = selectedClip.endTime;
+    }
+  };
+
   const formatTime = (timeInSeconds: number) => {
-    if (isNaN(timeInSeconds) || timeInSeconds === 0) return "00:00";
+    if (isNaN(timeInSeconds) || timeInSeconds < 0) return "00:00";
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = Math.floor(timeInSeconds % 60);
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   };
 
-  const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const progressPercentage = clipDisplayDuration > 0 ? (currentTime / clipDisplayDuration) * 100 : 0;
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
@@ -94,7 +134,7 @@ const VideoPreview = () => {
             </div>
         </div>
         <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{formatTime(currentTime)} / {formatTime(duration)}</span>
+            <span className="text-xs text-muted-foreground">{formatTime(currentTime)} / {formatTime(clipDisplayDuration)}</span>
             <Button variant="ghost" size="icon"><Expand className="h-5 w-5" /></Button>
         </div>
       </div>

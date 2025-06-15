@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Scissors, Plus, Minus, Download, Loader2, MapPin } from "lucide-react";
+import { Plus, Minus, Download, Loader2, MapPin } from "lucide-react";
 import { useEditorStore } from '@/lib/store';
 
 interface TimelineControlsProps {
@@ -14,7 +14,6 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({ handleExport }) => 
   return (
     <div className="p-2 border-b border-border flex items-center justify-between">
       <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm"><Scissors className="h-4 w-4 mr-2"/>Split</Button>
           <Button variant="secondary" size="sm" onClick={() => addAudioMarker(currentTime)}><MapPin className="h-4 w-4 mr-2"/>Add Marker</Button>
           <Button variant="secondary" size="sm" onClick={handleExport} disabled={isExporting}>
             {isExporting ? (
