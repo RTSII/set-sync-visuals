@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useEditorStore } from '@/lib/store';
 import { Button } from "@/components/ui/button";
@@ -76,22 +75,22 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
   }
 
   return (
-    <div className="h-20 bg-secondary/30 rounded-lg p-2 flex items-center gap-2">
-      <div className="w-8 h-full flex items-center justify-center bg-muted rounded flex-shrink-0">
-          <Video className="h-4 w-4 text-foreground"/>
+    <div className="h-12 bg-secondary/30 rounded-md p-1 flex items-center gap-1">
+      <div className="w-6 h-full flex items-center justify-center bg-muted rounded flex-shrink-0">
+          <Video className="h-3 w-3 text-foreground"/>
       </div>
-      <div className="flex-1 h-full flex items-center gap-2">
+      <div className="flex-1 h-full flex items-center gap-1">
           {timelineClips.map((clip, index) => (
              <React.Fragment key={clip.id}>
               {index > 0 && (
-                <div className="w-6 h-full flex items-center justify-center flex-shrink-0">
+                <div className="w-4 h-full flex items-center justify-center flex-shrink-0">
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="w-5 h-5 rounded-full hover:bg-primary/20"
+                    className="w-3 h-3 rounded-full hover:bg-primary/20"
                     onClick={() => handleToggleTransition(clip.id, clip.transition)}
                   >
-                    <GitMerge className={`h-3 w-3 transition-colors ${clip.transition ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <GitMerge className={`h-2 w-2 transition-colors ${clip.transition ? 'text-primary' : 'text-muted-foreground'}`} />
                   </Button>
                 </div>
               )}
@@ -100,7 +99,7 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
                 style={{ width: `${Math.max(MIN_CLIP_DURATION * PIXELS_PER_SECOND, ((clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0)) * PIXELS_PER_SECOND)}px`}}
               >
                 <div
-                 className={`w-full h-full rounded-md relative overflow-hidden cursor-pointer active:cursor-grabbing group ${selectedClip?.id === clip.id && !trimmingClipId ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`}
+                 className={`w-full h-full rounded-sm relative overflow-hidden cursor-pointer active:cursor-grabbing group ${selectedClip?.id === clip.id && !trimmingClipId ? 'ring-1 ring-primary ring-offset-1 ring-offset-background' : ''}`}
                  draggable
                  onClick={() => setSelectedClip(clip)}
                  onDoubleClick={(e) => handleDoubleClick(e, clip.id)}
@@ -111,24 +110,24 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
                 >
                   <video src={clip.src} className="w-full h-full object-cover pointer-events-none" muted />
                   <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-                  <p className="absolute bottom-0.5 left-0.5 text-xs text-white bg-black/50 px-1 rounded-sm truncate pointer-events-none max-w-full">
+                  <p className="absolute bottom-0 left-0 text-xs text-white bg-black/50 px-1 rounded-sm truncate pointer-events-none max-w-full text-[10px]">
                       {clip.file.name}
                   </p>
                 </div>
                 {trimmingClipId === clip.id && (
                   <>
-                    <div className="absolute inset-0 ring-2 ring-primary ring-offset-2 ring-offset-background rounded-md pointer-events-none z-10"></div>
+                    <div className="absolute inset-0 ring-1 ring-primary ring-offset-1 ring-offset-background rounded-sm pointer-events-none z-10"></div>
                     <div 
-                        className="absolute -left-1 top-0 bottom-0 w-2 bg-primary/80 hover:bg-primary transition-colors cursor-ew-resize z-20 flex items-center justify-center rounded-l-sm"
+                        className="absolute -left-0.5 top-0 bottom-0 w-1 bg-primary/80 hover:bg-primary transition-colors cursor-ew-resize z-20 flex items-center justify-center rounded-l-sm"
                         onMouseDown={(e) => handleTrimMouseDown(e, clip, 'left')}
                     >
-                      <div className="w-0.5 h-3 bg-primary-foreground/70 rounded-full" />
+                      <div className="w-0.5 h-2 bg-primary-foreground/70 rounded-full" />
                     </div>
                     <div
-                        className="absolute -right-1 top-0 bottom-0 w-2 bg-primary/80 hover:bg-primary transition-colors cursor-ew-resize z-20 flex items-center justify-center rounded-r-sm"
+                        className="absolute -right-0.5 top-0 bottom-0 w-1 bg-primary/80 hover:bg-primary transition-colors cursor-ew-resize z-20 flex items-center justify-center rounded-r-sm"
                         onMouseDown={(e) => handleTrimMouseDown(e, clip, 'right')}
                     >
-                      <div className="w-0.5 h-3 bg-primary-foreground/70 rounded-full" />
+                      <div className="w-0.5 h-2 bg-primary-foreground/70 rounded-full" />
                     </div>
                   </>
                 )}

@@ -173,18 +173,18 @@ const Timeline = () => {
   const playheadPosition = duration > 0 ? `${(currentTime / duration) * 100}%` : '0%';
 
   return (
-    <Card className="flex flex-col h-full bg-transparent border-0 shadow-none">
+    <Card className="flex flex-col h-full bg-transparent border-0 shadow-none overflow-hidden">
       {audioSrc && <audio ref={audioRef} src={audioSrc} />}
       <TimelineControls handleExport={handleExport} />
-      <CardContent className="p-4 pt-2 flex-1 min-h-0 overflow-hidden">
+      <CardContent className="p-2 pt-1 flex-1 min-h-0 overflow-hidden">
         {isExporting && (
-            <div className="my-2 space-y-1">
-              <p className="text-sm text-muted-foreground text-center">Processing video, please wait...</p>
-              <Progress value={exportProgress} className="w-full" />
+            <div className="mb-1 space-y-1">
+              <p className="text-xs text-muted-foreground text-center">Processing video, please wait...</p>
+              <Progress value={exportProgress} className="w-full h-1" />
             </div>
         )}
         <div 
-          className="relative min-w-[800px] h-full overflow-x-auto"
+          className="relative min-w-[600px] h-full overflow-x-auto overflow-y-hidden"
           onDrop={handleDropOnTimeline}
           onDragOver={(e) => e.preventDefault()}
           ref={timelineContainerRef}
@@ -192,12 +192,12 @@ const Timeline = () => {
             <TimelineRuler />
             
             {/* Playhead */}
-            <div className="absolute top-6 bottom-0 w-0.5 bg-primary z-20" style={{left: playheadPosition}}>
-                <div className="h-2 w-2 rounded-full bg-background border-2 border-primary absolute -top-1 -translate-x-1/2"></div>
+            <div className="absolute top-4 bottom-0 w-0.5 bg-primary z-20" style={{left: playheadPosition}}>
+                <div className="h-1.5 w-1.5 rounded-full bg-background border border-primary absolute -top-0.5 -translate-x-1/2"></div>
             </div>
 
             {/* Tracks */}
-            <div className="space-y-2 mt-2">
+            <div className="space-y-1 mt-1">
                 <AudioTrack duration={duration} setDraggingMarkerIndex={setDraggingMarkerIndex} />
                 <VideoTrack
                   dragItem={dragItem}
