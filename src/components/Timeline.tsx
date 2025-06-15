@@ -1,18 +1,16 @@
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Scissors, Plus, Minus, AudioWaveform, Video, Download, Loader2, GitMerge, MapPin } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import React, { useRef, useEffect, useState } from "react";
 import { useEditor } from "@/context/EditorContext";
 import { useEditorStore } from "@/lib/store";
 import { toast } from "sonner";
-import { Progress } from "@/components/ui/progress";
 import { exportVideo } from "@/lib/export";
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { Transition } from "@/types";
+import { TimelineControls, AudioTrack, VideoTrack, TimelineRuler } from './timeline';
 
 const Timeline = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const timelineContainerRef = useRef<HTMLDivElement>(null);
   const { audioRef } = useEditor();
   const { 
@@ -20,8 +18,6 @@ const Timeline = () => {
     setTimelineClips,
     updateClip,
     addClipToTimeline,
-    selectedClip,
-    setSelectedClip,
     currentTime,
     duration,
     audioSrc,
@@ -48,29 +44,6 @@ const Timeline = () => {
       }
     }
   }, [audioSrc]);
-
-  useEffect(() => {
-    if (waveform.length > 0 && canvasRef.current) {
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
-        if (!context) return;
-        
-        const width = canvas.width;
-        const height = canvas.height;
-        context.clearRect(0, 0, width, height);
-        
-        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary');
-        context.fillStyle = `hsl(${primaryColor})`;
-
-        const barWidth = width / waveform.length;
-        
-        waveform.forEach((val, i) => {
-            const barHeight = val * height * 1.5; // Amplify for better visibility
-            const y = (height - barHeight) / 2;
-            context.fillRect(i * barWidth, y, barWidth * 0.9, barHeight); // 0.9 for bar spacing
-        });
-    }
-  }, [waveform]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -191,28 +164,7 @@ const Timeline = () => {
   return (
     <Card className="flex flex-col h-full">
       {audioSrc && <audio ref={audioRef} src={audioSrc} />}
-      <div className="p-2 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm"><Scissors className="h-4 w-4 mr-2"/>Split</Button>
-            <Button variant="secondary" size="sm" onClick={() => addAudioMarker(currentTime)}><MapPin className="h-4 w-4 mr-2"/>Add Marker</Button>
-            <Button variant="secondary" size="sm" onClick={handleExport} disabled={isExporting}>
-              {isExporting ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
-              {isExporting ? `Exporting... ${exportProgress}%` : "Export Video"}
-            </Button>
-        </div>
-        <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">00:01:15:03</span>
-        </div>
-        <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon"><Minus className="h-4 w-4" /></Button>
-            <div className="w-24 bg-muted h-1 rounded-full"><div className="w-1/2 bg-primary h-1 rounded-full"></div></div>
-            <Button variant="ghost" size="icon"><Plus className="h-4 w-4" /></Button>
-        </div>
-      </div>
+      <TimelineControls handleExport={handleExport} />
       <CardContent className="p-4 flex-1 overflow-x-auto">
         {isExporting && (
             <div className="my-2 space-y-1">
@@ -226,12 +178,7 @@ const Timeline = () => {
           onDragOver={(e) => e.preventDefault()}
           ref={timelineContainerRef}
         >
-            {/* Timeline Ruler */}
-            <div className="h-6 flex items-center text-xs text-muted-foreground mb-2">
-                {Array.from({length: 8}).map((_, i) => (
-                    <div key={i} className="w-[100px] border-l border-border/50 pl-1">{`0:${i*10}`}</div>
-                ))}
-            </div>
+            <TimelineRuler />
             
             {/* Playhead */}
             <div className="absolute top-6 bottom-0 w-0.5 bg-primary z-10" style={{left: playheadPosition}}>
@@ -240,78 +187,13 @@ const Timeline = () => {
 
             {/* Tracks */}
             <div className="space-y-2">
-                {/* Audio Track */}
-                <div className="h-28 bg-secondary/30 rounded-lg p-2 flex items-center gap-2">
-                    <div className="w-8 h-full flex items-center justify-center bg-muted rounded">
-                        <AudioWaveform className="h-5 w-5 text-foreground"/>
-                    </div>
-                    <div className="flex-1 h-full relative bg-muted/30 rounded">
-                      {waveform.length > 0 ? (
-                        <>
-                          <canvas ref={canvasRef} className="w-full h-full" width="1200" height="96"></canvas>
-                          {audioMarkers.map((markerTime, index) => {
-                            const markerPosition = duration > 0 ? `${(markerTime / duration) * 100}%` : '0%';
-                            return (
-                              <div
-                                key={index}
-                                className="absolute top-0 bottom-0 w-0.5 bg-yellow-400 z-20 cursor-ew-resize group"
-                                style={{ left: markerPosition }}
-                                onMouseDown={() => setDraggingMarkerIndex(index)}
-                              >
-                                <div className="absolute -top-1.5 -translate-x-1/2 bg-yellow-400 p-0.5 rounded-full ring-2 ring-background group-hover:scale-125 transition-transform">
-                                  <MapPin className="h-3 w-3 text-background" fill="currentColor"/>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-center p-4">
-                            <p className="text-muted-foreground text-sm">Upload an audio file from the media library to generate its waveform.</p>
-                        </div>
-                      )}
-                    </div>
-                </div>
-
-                {/* Video Track */}
-                <div className="h-28 bg-secondary/30 rounded-lg p-2 flex items-center gap-2">
-                    <div className="w-8 h-full flex items-center justify-center bg-muted rounded">
-                        <Video className="h-5 w-5 text-foreground"/>
-                    </div>
-                    <div className="flex-1 h-full flex items-center">
-                        {timelineClips.map((clip, index) => (
-                           <React.Fragment key={clip.id}>
-                            {index > 0 && (
-                              <div className="w-8 h-full flex items-center justify-center">
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="w-7 h-7 rounded-full hover:bg-primary/20"
-                                  onClick={() => handleToggleTransition(clip.id, clip.transition)}
-                                >
-                                  <GitMerge className={`h-4 w-4 transition-colors ${clip.transition ? 'text-primary' : 'text-muted-foreground'}`} />
-                                </Button>
-                              </div>
-                            )}
-                            <div
-                             className={`h-full aspect-video rounded-md relative overflow-hidden cursor-pointer active:cursor-grabbing group ${selectedClip?.id === clip.id ? 'ring-2 ring-primary ring-offset-background' : ''}`}
-                             draggable
-                             onClick={() => setSelectedClip(clip)}
-                             onDragStart={() => (dragItem.current = index)}
-                             onDragEnter={() => (dragOverItem.current = index)}
-                             onDragEnd={handleTimelineDragSort}
-                             onDragOver={(e) => e.stopPropagation()}
-                            >
-                              <video src={clip.src} className="w-full h-full object-cover pointer-events-none" muted />
-                              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-                              <p className="absolute bottom-1 left-1 text-xs text-white bg-black/50 px-1 rounded-sm truncate pointer-events-none max-w-full">
-                                  {clip.file.name}
-                              </p>
-                            </div>
-                           </React.Fragment>
-                        ))}
-                    </div>
-                </div>
+                <AudioTrack duration={duration} setDraggingMarkerIndex={setDraggingMarkerIndex} />
+                <VideoTrack
+                  dragItem={dragItem}
+                  dragOverItem={dragOverItem}
+                  handleTimelineDragSort={handleTimelineDragSort}
+                  handleToggleTransition={handleToggleTransition}
+                />
             </div>
         </div>
       </CardContent>
