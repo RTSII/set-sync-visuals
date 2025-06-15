@@ -36,14 +36,14 @@ const AudioTrack: React.FC<AudioTrackProps> = ({ duration, setDraggingMarkerInde
   }, [waveform]);
 
   return (
-    <div className="h-28 bg-secondary/30 rounded-lg p-2 flex items-center gap-2">
+    <div className="h-20 bg-secondary/30 rounded-lg p-2 flex items-center gap-2">
       <div className="w-8 h-full flex items-center justify-center bg-muted rounded">
-          <AudioWaveform className="h-5 w-5 text-foreground"/>
+          <AudioWaveform className="h-4 w-4 text-foreground"/>
       </div>
       <div className="flex-1 h-full relative bg-muted/30 rounded">
         {waveform.length > 0 ? (
           <>
-            <canvas ref={canvasRef} className="w-full h-full" width="1200" height="96"></canvas>
+            <canvas ref={canvasRef} className="w-full h-full" width="1200" height="64"></canvas>
             {audioMarkers.map((markerTime, index) => {
               const markerPosition = duration > 0 ? `${(markerTime / duration) * 100}%` : '0%';
               return (
@@ -54,15 +54,15 @@ const AudioTrack: React.FC<AudioTrackProps> = ({ duration, setDraggingMarkerInde
                   onMouseDown={() => setDraggingMarkerIndex(index)}
                 >
                   <div className="absolute -top-1.5 -translate-x-1/2 bg-yellow-400 p-0.5 rounded-full ring-2 ring-background group-hover:scale-125 transition-transform">
-                    <MapPin className="h-3 w-3 text-background" fill="currentColor"/>
+                    <MapPin className="h-2.5 w-2.5 text-background" fill="currentColor"/>
                   </div>
                 </div>
               );
             })}
           </>
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-center p-4">
-              <p className="text-muted-foreground text-sm">Upload an audio file from the media library to generate its waveform.</p>
+          <div className="w-full h-full flex items-center justify-center text-center p-2">
+              <p className="text-muted-foreground text-xs">Upload an audio file from the media library to generate its waveform.</p>
           </div>
         )}
       </div>
