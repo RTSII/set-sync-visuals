@@ -4,6 +4,7 @@ import { Play, Pause, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
 import { useEditorStore } from "@/lib/store";
 import React from 'react';
+import { toast } from "sonner";
 
 const VideoPreview = () => {
   const { 
@@ -23,16 +24,17 @@ const VideoPreview = () => {
   } = useEditorStore();
 
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
+  const previewContainerRef = React.useRef<HTMLDivElement>(null);
 
   const handleTimeUpdate = () => {
     if (videoRef.current && selectedClip) {
       const absoluteTime = videoRef.current.currentTime;
-      if (absoluteTime >= selectedClip.endTime) {
+      if (absoluteTime >= (selectedClip.endTime ?? videoRef.current.duration)) {
         videoRef.current.pause();
         setCurrentTime(clipDisplayDuration);
         handleClipEnded();
       } else {
-        setCurrentTime(absoluteTime - selectedClip.startTime);
+        setCurrentTime(absoluteTime - (selectedClip.startTime ?? 0));
       }
     }
   };
@@ -41,7 +43,7 @@ const VideoPreview = () => {
     if (videoRef.current && selectedClip) {
       const videoDuration = videoRef.current.duration;
       // If clip just added, populate its duration properties
-      if (selectedClip.originalDuration === 0) {
+      if (!selectedClip.originalDuration) {
         updateClip(selectedClip.id, {
           startTime: 0,
           endTime: videoDuration,
@@ -49,8 +51,8 @@ const VideoPreview = () => {
         });
       } else {
         // For subsequent loads of an already-initialized clip
-        videoRef.current.currentTime = selectedClip.startTime;
-        setClipDisplayDuration(selectedClip.endTime - selectedClip.startTime);
+        videoRef.current.currentTime = selectedClip.startTime ?? 0;
+        setClipDisplayDuration((selectedClip.endTime ?? videoDuration) - (selectedClip.startTime ?? 0));
         setCurrentTime(0); // Reset playhead for this clip
         if (wasPlaying) {
           videoRef.current.play().catch(e => console.error("Autoplay failed", e));
@@ -62,22 +64,41 @@ const VideoPreview = () => {
 
   React.useEffect(() => {
     // Effect to react to store updates from handleLoadedMetadata
-    if (videoRef.current && selectedClip && selectedClip.originalDuration > 0) {
-      videoRef.current.currentTime = selectedClip.startTime;
-      setClipDisplayDuration(selectedClip.endTime - selectedClip.startTime);
+    if (videoRef.current && selectedClip && (selectedClip.originalDuration ?? 0) > 0) {
+      const videoDuration = videoRef.current.duration;
+      videoRef.current.currentTime = selectedClip.startTime ?? 0;
+      setClipDisplayDuration((selectedClip.endTime ?? videoDuration) - (selectedClip.startTime ?? 0));
       setCurrentTime(0);
     }
-  }, [selectedClip?.id, selectedClip?.endTime, selectedClip?.startTime]);
+  }, [selectedClip?.id, selectedClip?.endTime, selectedClip?.startTime, selectedClip?.originalDuration]);
 
   const jumpToStart = () => {
     if (videoRef.current && selectedClip) {
-      videoRef.current.currentTime = selectedClip.startTime;
+      videoRef.current.currentTime = selectedClip.startTime ?? 0;
+      setCurrentTime(0);
     }
   };
 
   const jumpToEnd = () => {
     if (videoRef.current && selectedClip) {
-      videoRef.current.currentTime = selectedClip.endTime;
+      const newTime = selectedClip.endTime ?? videoRef.current.duration;
+      videoRef.current.currentTime = newTime;
+      setCurrentTime(newTime - (selectedClip.startTime ?? 0));
+    }
+  };
+
+  const toggleFullScreen = () => {
+    const elem = previewContainerRef.current;
+    if (!elem) return;
+
+    if (!document.fullscreenElement) {
+        elem.requestFullscreen().catch(err => {
+            toast.error("Could not enter full screen mode.", { description: err.message });
+        });
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
     }
   };
 
@@ -91,7 +112,7 @@ const VideoPreview = () => {
   const progressPercentage = clipDisplayDuration > 0 ? (currentTime / clipDisplayDuration) * 100 : 0;
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
+    <div ref={previewContainerRef} className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
       <div className="bg-black flex items-center justify-center relative group overflow-hidden">
         {selectedClip ? (
             <video
@@ -135,7 +156,7 @@ const VideoPreview = () => {
         </div>
         <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">{formatTime(currentTime)} / {formatTime(clipDisplayDuration)}</span>
-            <Button variant="ghost" size="icon"><Expand className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={toggleFullScreen}><Expand className="h-5 w-5" /></Button>
         </div>
       </div>
     </div>

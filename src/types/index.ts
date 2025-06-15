@@ -8,8 +8,8 @@ export type MediaClip = {
   id: string;
   src: string;
   file: File;
-  startTime: number;
-  endTime: number;
-  originalDuration: number;
+  startTime?: number;
+  endTime?: number;
+  originalDuration?: number;
   transition?: Transition | null; // Transition from the PREVIOUS clip to this one
 };

@@ -30,7 +30,7 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
     e.stopPropagation();
     setDraggingHandle(handle);
     dragClipRef.current = clip;
-    dragStartRef.current = { x: e.clientX, startTime: clip.startTime, endTime: clip.endTime };
+    dragStartRef.current = { x: e.clientX, startTime: clip.startTime ?? 0, endTime: clip.endTime ?? clip.originalDuration ?? 0 };
   };
 
   useEffect(() => {
@@ -47,8 +47,8 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
                 updateClip(clip.id, { startTime: newStartTime });
             }
         } else { // right handle
-            const newEndTime = Math.min(clip.originalDuration, dragStartRef.current.endTime + deltaTime);
-            if (newEndTime > dragStartRef.current.startTime + MIN_CLIP_DURATION) {
+            const newEndTime = Math.min(clip.originalDuration ?? Infinity, dragStartRef.current.endTime + deltaTime);
+            if (newEndTime > (clip.startTime ?? 0) + MIN_CLIP_DURATION) {
                 updateClip(clip.id, { endTime: newEndTime });
             }
         }
@@ -97,7 +97,7 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
               )}
               <div
                 className="relative h-full flex-shrink-0"
-                style={{ width: `${Math.max(MIN_CLIP_DURATION * PIXELS_PER_SECOND, (clip.endTime - clip.startTime) * PIXELS_PER_SECOND)}px`}}
+                style={{ width: `${Math.max(MIN_CLIP_DURATION * PIXELS_PER_SECOND, ((clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0)) * PIXELS_PER_SECOND)}px`}}
               >
                 <div
                  className={`w-full h-full rounded-md relative overflow-hidden cursor-pointer active:cursor-grabbing group ${selectedClip?.id === clip.id && !trimmingClipId ? 'ring-2 ring-primary ring-offset-2 ring-offset-secondary/30' : ''}`}
