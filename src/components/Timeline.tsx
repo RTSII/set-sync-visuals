@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Scissors, Plus, Minus, AudioWaveform, Video, Upload } from "lucide-react";
@@ -126,7 +127,7 @@ const Timeline = () => {
   const playheadPosition = duration > 0 ? `${(currentTime / duration) * 100}%` : '0%';
 
   return (
-    <Card className="flex-1 flex flex-col flex-[2]">
+    <Card className="flex-1 flex flex-col flex-[1]">
       {audioSrc && <audio ref={audioRef} src={audioSrc} />}
       <div className="p-2 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -147,13 +148,13 @@ const Timeline = () => {
       </div>
       <CardContent className="p-4 flex-1 overflow-x-auto">
         <div 
-          className="relative min-w-[1200px]"
+          className="relative min-w-[800px]"
           onDrop={handleDropOnTimeline}
           onDragOver={(e) => e.preventDefault()}
         >
             {/* Timeline Ruler */}
             <div className="h-6 flex items-center text-xs text-muted-foreground mb-2">
-                {Array.from({length: 12}).map((_, i) => (
+                {Array.from({length: 8}).map((_, i) => (
                     <div key={i} className="w-[100px] border-l border-border/50 pl-1">{`0:${i*10}`}</div>
                 ))}
             </div>

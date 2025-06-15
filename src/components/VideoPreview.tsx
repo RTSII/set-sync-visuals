@@ -39,7 +39,7 @@ const VideoPreview = () => {
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden flex flex-col flex-[1]">
-      <div className="aspect-video bg-black flex items-center justify-center relative group">
+      <div className="flex-1 bg-black flex items-center justify-center relative group">
         {selectedClip ? (
             <video
                 ref={videoRef}
