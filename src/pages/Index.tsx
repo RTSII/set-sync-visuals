@@ -7,9 +7,9 @@ import { EditorProvider } from "@/context/EditorContext";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background font-sans flex flex-col text-foreground">
+    <div className="h-screen bg-background font-sans flex flex-col text-foreground overflow-hidden">
       <Header />
-      <main className="flex-1 flex gap-4 p-4 pt-20">
+      <main className="flex-1 flex gap-4 p-4 pt-28">
         <EditorProvider>
           <div className="flex-[2] flex flex-col gap-4">
               <VideoPreview />

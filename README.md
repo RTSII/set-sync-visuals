@@ -1,4 +1,7 @@
-# Welcome to your Lovable project
+
+# RVJ - A Lovable Video Editor
+
+This is a simple video editor built with React, TypeScript, and Tailwind CSS using Lovable. It allows you to upload video and audio clips, arrange them on a timeline, and preview the result.
 
 ## Project info
 
