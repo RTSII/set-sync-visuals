@@ -9,7 +9,7 @@ const Header = () => {
         <div className="flex items-center gap-3">
           <Disc3 className="text-primary animate-spin" style={{ animationDuration: '3s' }} size={28} />
           <h1 className="text-xl font-bold text-foreground">
-            VibeSync
+            RVJ
           </h1>
         </div>
         <div className="flex items-center gap-4">
