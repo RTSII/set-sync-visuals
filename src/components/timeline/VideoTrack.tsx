@@ -100,7 +100,7 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
                 style={{ width: `${Math.max(MIN_CLIP_DURATION * PIXELS_PER_SECOND, ((clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0)) * PIXELS_PER_SECOND)}px`}}
               >
                 <div
-                 className={`w-full h-full rounded-md relative overflow-hidden cursor-pointer active:cursor-grabbing group ${selectedClip?.id === clip.id && !trimmingClipId ? 'ring-2 ring-primary ring-offset-2 ring-offset-secondary/30' : ''}`}
+                 className={`w-full h-full rounded-md relative overflow-hidden cursor-pointer active:cursor-grabbing group ${selectedClip?.id === clip.id && !trimmingClipId ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`}
                  draggable
                  onClick={() => setSelectedClip(clip)}
                  onDoubleClick={(e) => handleDoubleClick(e, clip.id)}
@@ -117,15 +117,19 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
                 </div>
                 {trimmingClipId === clip.id && (
                   <>
-                    <div className="absolute inset-0 ring-2 ring-primary ring-offset-2 ring-offset-secondary/30 rounded-md pointer-events-none z-10"></div>
+                    <div className="absolute inset-0 ring-2 ring-primary ring-offset-2 ring-offset-background rounded-md pointer-events-none z-10"></div>
                     <div 
-                        className="absolute -left-1.5 top-1/2 -translate-y-1/2 h-6 w-3 bg-primary rounded-full cursor-ew-resize z-20"
+                        className="absolute -left-1 top-0 bottom-0 w-2 bg-primary/80 hover:bg-primary transition-colors cursor-ew-resize z-20 flex items-center justify-center rounded-l-sm"
                         onMouseDown={(e) => handleTrimMouseDown(e, clip, 'left')}
-                    />
+                    >
+                      <div className="w-0.5 h-4 bg-primary-foreground/70 rounded-full" />
+                    </div>
                     <div
-                        className="absolute -right-1.5 top-1/2 -translate-y-1/2 h-6 w-3 bg-primary rounded-full cursor-ew-resize z-20"
+                        className="absolute -right-1 top-0 bottom-0 w-2 bg-primary/80 hover:bg-primary transition-colors cursor-ew-resize z-20 flex items-center justify-center rounded-r-sm"
                         onMouseDown={(e) => handleTrimMouseDown(e, clip, 'right')}
-                    />
+                    >
+                      <div className="w-0.5 h-4 bg-primary-foreground/70 rounded-full" />
+                    </div>
                   </>
                 )}
               </div>

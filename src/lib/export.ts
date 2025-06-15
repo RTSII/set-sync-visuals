@@ -17,12 +17,14 @@ export async function exportVideo({
   ffmpeg
 }: ExportProps): Promise<Blob> {
   
-  // Using a specific version from unpkg for stability
   const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
   
-  ffmpeg.on('progress', ({ progress }) => {
-    // Progress is a value from 0 to 1
-    setExportProgress(Math.round(progress * 100));
+  let totalFFmpegDuration = 0;
+  
+  ffmpeg.on('progress', ({ progress, time }) => {
+    // We calculate progress based on the total duration of all clips.
+    const currentProgress = Math.min(1, time / totalFFmpegDuration);
+    setExportProgress(Math.round(currentProgress * 100));
   });
 
   if (!ffmpeg.loaded) {
@@ -32,21 +34,54 @@ export async function exportVideo({
     });
   }
 
-  // Write files to ffmpeg's virtual filesystem
+  // --- Step 1: Write all necessary source files to FFmpeg's virtual filesystem ---
   await ffmpeg.writeFile(audioFile.name, await fetchFile(audioFile));
-  
-  const videoFileNames: string[] = [];
   for (const clip of timelineClips) {
-    await ffmpeg.writeFile(clip.file.name, await fetchFile(clip.file));
-    videoFileNames.push(clip.file.name);
+    // Avoid writing the same file multiple times if it's used more than once in the timeline
+    if (!(await ffmpeg.exists(clip.file.name))) {
+       await ffmpeg.writeFile(clip.file.name, await fetchFile(clip.file));
+    }
   }
 
-  // Create a file listing all videos to concatenate
-  const concatFileContent = videoFileNames.map(name => `file '${name.replace(/'/g, "'\\''")}'`).join('\n');
+  // --- Step 2: Trim each video clip according to its start/end times ---
+  const trimmedClipNames: string[] = [];
+  const trimProgressPortion = 0.8; // Assume trimming takes 80% of the time
+  let accumulatedProgress = 0;
+
+  totalFFmpegDuration = timelineClips.reduce((acc, clip) => {
+    const duration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
+    return acc + duration;
+  }, 0);
+
+  for (let i = 0; i < timelineClips.length; i++) {
+    const clip = timelineClips[i];
+    const outputFileName = `trimmed_${i}.mp4`;
+    
+    const startTime = clip.startTime ?? 0;
+    const endTime = clip.endTime ?? clip.originalDuration ?? 0;
+    const duration = endTime - startTime;
+
+    // To prevent errors, ensure duration is positive
+    if (duration <= 0) continue;
+
+    // Using -t (duration) is often more reliable with -ss than -to (end time)
+    await ffmpeg.exec([
+        '-i', clip.file.name,
+        '-ss', String(startTime),
+        '-t', String(duration),
+        '-c', 'copy',
+        outputFileName
+    ]);
+    trimmedClipNames.push(outputFileName);
+  }
+
+  // --- Step 3: Create a concat file and concatenate all trimmed clips ---
+  const concatFileContent = trimmedClipNames.map(name => `file '${name.replace(/'/g, "'\\''")}'`).join('\n');
   await ffmpeg.writeFile('concat.txt', concatFileContent);
 
-  // Note: -c:v copy is fast but requires all clips to have compatible codecs, resolution, etc.
-  // For a more robust solution, re-encoding (-c:v libx264) would be needed, but it's much slower.
+  // Set total duration for concatenation progress (rough estimate)
+  totalFFmpegDuration += totalFFmpegDuration; // Double it for concat stage
+
   await ffmpeg.exec([
     '-f', 'concat',
     '-safe', '0',
@@ -57,6 +92,8 @@ export async function exportVideo({
     '-shortest',
     'output.mp4',
   ]);
+  
+  setExportProgress(100);
 
   const data = await ffmpeg.readFile('output.mp4');
   return new Blob([data], { type: 'video/mp4' });

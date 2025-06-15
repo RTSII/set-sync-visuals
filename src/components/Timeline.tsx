@@ -127,6 +127,19 @@ const Timeline = () => {
       });
     }
 
+    const totalDuration = timelineClips.reduce((acc, clip) => {
+      const duration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
+      return acc + Math.max(0, duration);
+    }, 0);
+
+    if (totalDuration > 300) { // Notify for videos longer than 5 minutes
+      toast.info("Long export started...", {
+        description: "Exporting long videos can be memory intensive and may take a while. Please keep this tab open and active.",
+        duration: 8000
+      });
+    }
+
+
     setIsExporting(true);
     setExportProgress(0);
 
@@ -162,10 +175,10 @@ const Timeline = () => {
   const playheadPosition = duration > 0 ? `${(currentTime / duration) * 100}%` : '0%';
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="flex flex-col h-full bg-transparent border-0 shadow-none">
       {audioSrc && <audio ref={audioRef} src={audioSrc} />}
       <TimelineControls handleExport={handleExport} />
-      <CardContent className="p-4 flex-1 overflow-x-auto">
+      <CardContent className="p-4 pt-2 flex-1 overflow-x-auto">
         {isExporting && (
             <div className="my-2 space-y-1">
               <p className="text-sm text-muted-foreground text-center">Processing video, please wait...</p>
@@ -181,12 +194,12 @@ const Timeline = () => {
             <TimelineRuler />
             
             {/* Playhead */}
-            <div className="absolute top-6 bottom-0 w-0.5 bg-primary z-10" style={{left: playheadPosition}}>
+            <div className="absolute top-6 bottom-0 w-0.5 bg-primary z-20" style={{left: playheadPosition}}>
                 <div className="h-2 w-2 rounded-full bg-background border-2 border-primary absolute -top-1 -translate-x-1/2"></div>
             </div>
 
             {/* Tracks */}
-            <div className="space-y-2">
+            <div className="space-y-2 mt-2">
                 <AudioTrack duration={duration} setDraggingMarkerIndex={setDraggingMarkerIndex} />
                 <VideoTrack
                   dragItem={dragItem}
