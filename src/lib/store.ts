@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { MediaClip } from '@/types';
 
@@ -21,12 +20,21 @@ interface EditorState {
 
   audioSrc: string | null;
   setAudioSrc: (src: string | null) => void;
+  
+  audioFile: File | null;
+  setAudioFile: (file: File | null) => void;
 
   waveform: number[];
   setWaveform: (data: number[]) => void;
   
   wasPlaying: boolean;
   setWasPlaying: (wasPlaying: boolean) => void;
+  
+  isExporting: boolean;
+  setIsExporting: (isExporting: boolean) => void;
+
+  exportProgress: number;
+  setExportProgress: (progress: number) => void;
   
   loadAudio: (file: File) => Promise<void>;
 }
@@ -62,13 +70,23 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   audioSrc: null,
   setAudioSrc: (src) => set({ audioSrc: src }),
 
+  audioFile: null,
+  setAudioFile: (file) => set({ audioFile: file }),
+
   waveform: [],
   setWaveform: (data) => set({ waveform: data }),
   
   wasPlaying: false,
   setWasPlaying: (wasPlaying) => set({ wasPlaying }),
 
+  isExporting: false,
+  setIsExporting: (isExporting: boolean) => set({ isExporting }),
+
+  exportProgress: 0,
+  setExportProgress: (progress: number) => set({ exportProgress: progress }),
+  
   loadAudio: async (file: File) => {
+    get().setAudioFile(file); // Store the raw file for export
     const objectUrl = URL.createObjectURL(file);
     get().setAudioSrc(objectUrl);
 

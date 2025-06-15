@@ -1,10 +1,13 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Scissors, Plus, Minus, AudioWaveform, Video } from "lucide-react";
+import { Scissors, Plus, Minus, AudioWaveform, Video, Download, Loader2 } from "lucide-react";
 import React, { useRef, useEffect } from "react";
 import { useEditor } from "@/context/EditorContext";
 import { useEditorStore } from "@/lib/store";
+import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
+import { exportVideo } from "@/lib/export";
+import { FFmpeg } from '@ffmpeg/ffmpeg';
 
 const Timeline = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -19,9 +22,15 @@ const Timeline = () => {
     duration,
     audioSrc,
     waveform,
+    audioFile,
+    isExporting,
+    setIsExporting,
+    exportProgress,
+    setExportProgress,
   } = useEditorStore();
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
+  const ffmpegRef = useRef(new FFmpeg());
 
   useEffect(() => {
     return () => {
@@ -82,6 +91,48 @@ const Timeline = () => {
     });
   };
 
+  const handleExport = async () => {
+    if (timelineClips.length === 0) {
+      toast.error("Cannot export.", { description: "Please add at least one video clip to the timeline." });
+      return;
+    }
+    if (!audioFile) {
+      toast.error("Cannot export.", { description: "Please add an audio track." });
+      return;
+    }
+
+    setIsExporting(true);
+    setExportProgress(0);
+
+    try {
+      const outputBlob = await exportVideo({
+        ffmpeg: ffmpegRef.current,
+        timelineClips,
+        audioFile,
+        setExportProgress,
+      });
+
+      const url = URL.createObjectURL(outputBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'rVJ-export.mp4';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success("Export complete!", { description: "Your video has been downloaded." });
+
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast.error("Export failed.", { 
+        description: "An error occurred during export. This can happen if video clips have different resolutions or formats. Check the console for details." 
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const playheadPosition = duration > 0 ? `${(currentTime / duration) * 100}%` : '0%';
 
   return (
@@ -90,6 +141,14 @@ const Timeline = () => {
       <div className="p-2 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm"><Scissors className="h-4 w-4 mr-2"/>Split</Button>
+            <Button variant="secondary" size="sm" onClick={handleExport} disabled={isExporting}>
+              {isExporting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              {isExporting ? `Exporting... ${exportProgress}%` : "Export Video"}
+            </Button>
         </div>
         <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">00:01:15:03</span>
@@ -101,6 +160,12 @@ const Timeline = () => {
         </div>
       </div>
       <CardContent className="p-4 flex-1 overflow-x-auto">
+        {isExporting && (
+            <div className="my-2 space-y-1">
+              <p className="text-sm text-muted-foreground text-center">Processing video, please wait...</p>
+              <Progress value={exportProgress} className="w-full" />
+            </div>
+        )}
         <div 
           className="relative min-w-[800px]"
           onDrop={handleDropOnTimeline}
