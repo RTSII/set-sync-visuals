@@ -8,13 +8,27 @@ const Timeline = () => {
   const [waveform, setWaveform] = useState<number[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { timelineClips, setTimelineClips, addClipToTimeline } = useEditor();
+  const { 
+    timelineClips, 
+    setTimelineClips, 
+    addClipToTimeline,
+    selectedClip,
+    setSelectedClip,
+    currentTime,
+    duration,
+    audioSrc,
+    setAudioSrc,
+    audioRef
+  } = useEditor();
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    const objectUrl = URL.createObjectURL(file);
+    setAudioSrc(objectUrl);
 
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -46,6 +60,14 @@ const Timeline = () => {
     }
   };
   
+  useEffect(() => {
+    return () => {
+      if (audioSrc) {
+        URL.revokeObjectURL(audioSrc);
+      }
+    }
+  }, [audioSrc]);
+
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
@@ -101,8 +123,11 @@ const Timeline = () => {
     });
   };
 
+  const playheadPosition = duration > 0 ? `${(currentTime / duration) * 100}%` : '0%';
+
   return (
-    <Card className="flex-1 flex flex-col">
+    <Card className="flex-1 flex flex-col flex-[2]">
+      {audioSrc && <audio ref={audioRef} src={audioSrc} />}
       <div className="p-2 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm"><Scissors className="h-4 w-4 mr-2"/>Split</Button>
@@ -134,7 +159,7 @@ const Timeline = () => {
             </div>
             
             {/* Playhead */}
-            <div className="absolute top-6 bottom-0 w-0.5 bg-primary z-10" style={{left: '25%'}}>
+            <div className="absolute top-6 bottom-0 w-0.5 bg-primary z-10" style={{left: playheadPosition}}>
                 <div className="h-2 w-2 rounded-full bg-background border-2 border-primary absolute -top-1 -translate-x-1/2"></div>
             </div>
 
@@ -165,8 +190,9 @@ const Timeline = () => {
                         {timelineClips.map((clip, index) => (
                            <div
                              key={clip.id}
-                             className="h-full aspect-video rounded-md relative overflow-hidden cursor-grab active:cursor-grabbing group"
+                             className={`h-full aspect-video rounded-md relative overflow-hidden cursor-pointer active:cursor-grabbing group ${selectedClip?.id === clip.id ? 'ring-2 ring-primary ring-offset-background' : ''}`}
                              draggable
+                             onClick={() => setSelectedClip(clip)}
                              onDragStart={() => (dragItem.current = index)}
                              onDragEnter={() => (dragOverItem.current = index)}
                              onDragEnd={handleTimelineDragSort}
