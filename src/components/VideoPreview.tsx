@@ -1,8 +1,8 @@
-
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
 import { useEditorStore } from "@/lib/store";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import React from 'react';
 import { toast } from "sonner";
 
@@ -25,6 +25,9 @@ const VideoPreview = () => {
 
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
   const previewContainerRef = React.useRef<HTMLDivElement>(null);
+
+  // Enable keyboard shortcuts
+  useKeyboardShortcuts();
 
   const handleTimeUpdate = () => {
     if (videoRef.current && selectedClip) {
@@ -125,17 +128,21 @@ const VideoPreview = () => {
                 onClick={togglePlay}
             />
         ) : (
-            <div className="w-full h-full flex items-center justify-center">
+            <div className="w-full h-full flex items-center justify-center flex-col gap-4">
               <img
                 src="/lovable-uploads/68782036-637d-4eae-9d56-aeb41156f0bd.png"
                 alt="RVJ Logo"
-                className="w-1/2 h-1/2 object-contain"
+                className="w-1/3 h-1/3 object-contain opacity-50"
               />
+              <div className="text-center text-muted-foreground">
+                <p className="text-lg font-medium">Select a clip to preview</p>
+                <p className="text-sm">Use Space to play/pause, J/L for -10s/+10s, ←/→ for -5s/+5s</p>
+              </div>
             </div>
         )}
         {selectedClip && !isPlaying && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
-                <Button size="icon" className="w-16 h-16 rounded-full bg-primary/80 hover:bg-primary animate-glow" onClick={togglePlay}>
+                <Button size="icon" className="w-16 h-16 rounded-full bg-primary/80 hover:bg-primary animate-glow pointer-events-auto" onClick={togglePlay}>
                     <Play className="h-8 w-8" fill="white" />
                 </Button>
             </div>
@@ -143,20 +150,20 @@ const VideoPreview = () => {
       </div>
       <div className="p-2 bg-secondary/20 border-t border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={jumpToStart}><Rewind className="h-5 w-5" /></Button>
-          <Button variant="ghost" size="icon" onClick={togglePlay}>
+          <Button variant="ghost" size="icon" onClick={jumpToStart} title="Jump to start"><Rewind className="h-5 w-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={togglePlay} title="Play/Pause (Space)">
             {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
           </Button>
-          <Button variant="ghost" size="icon" onClick={jumpToEnd}><FastForward className="h-5 w-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={jumpToEnd} title="Jump to end"><FastForward className="h-5 w-5" /></Button>
         </div>
         <div className="flex-1 mx-4">
             <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
-                <div className="bg-primary h-full" style={{ width: `${progressPercentage}%`}}></div>
+                <div className="bg-primary h-full transition-all duration-100" style={{ width: `${progressPercentage}%`}}></div>
             </div>
         </div>
         <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{formatTime(currentTime)} / {formatTime(clipDisplayDuration)}</span>
-            <Button variant="ghost" size="icon" onClick={toggleFullScreen}><Expand className="h-5 w-5" /></Button>
+            <span className="text-xs text-muted-foreground font-mono">{formatTime(currentTime)} / {formatTime(clipDisplayDuration)}</span>
+            <Button variant="ghost" size="icon" onClick={toggleFullScreen} title="Fullscreen"><Expand className="h-5 w-5" /></Button>
         </div>
       </div>
     </div>

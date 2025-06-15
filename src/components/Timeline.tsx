@@ -9,6 +9,7 @@ import { exportVideo } from "@/lib/export";
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { Transition } from "@/types";
 import { TimelineControls, AudioTrack, VideoTrack, TimelineRuler } from './timeline';
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const Timeline = () => {
   const timelineContainerRef = useRef<HTMLDivElement>(null);
@@ -178,37 +179,39 @@ const Timeline = () => {
     <Card className="flex flex-col h-full bg-transparent border-0 shadow-none">
       {audioSrc && <audio ref={audioRef} src={audioSrc} />}
       <TimelineControls handleExport={handleExport} />
-      <CardContent className="p-4 pt-2 flex-1 overflow-x-auto">
+      <CardContent className="p-4 pt-2 flex-1 min-h-0">
         {isExporting && (
             <div className="my-2 space-y-1">
               <p className="text-sm text-muted-foreground text-center">Processing video, please wait...</p>
               <Progress value={exportProgress} className="w-full" />
             </div>
         )}
-        <div 
-          className="relative min-w-[800px]"
-          onDrop={handleDropOnTimeline}
-          onDragOver={(e) => e.preventDefault()}
-          ref={timelineContainerRef}
-        >
-            <TimelineRuler />
-            
-            {/* Playhead */}
-            <div className="absolute top-6 bottom-0 w-0.5 bg-primary z-20" style={{left: playheadPosition}}>
-                <div className="h-2 w-2 rounded-full bg-background border-2 border-primary absolute -top-1 -translate-x-1/2"></div>
-            </div>
+        <ScrollArea className="h-full">
+          <div 
+            className="relative min-w-[800px] pb-4"
+            onDrop={handleDropOnTimeline}
+            onDragOver={(e) => e.preventDefault()}
+            ref={timelineContainerRef}
+          >
+              <TimelineRuler />
+              
+              {/* Playhead */}
+              <div className="absolute top-6 bottom-0 w-0.5 bg-primary z-20" style={{left: playheadPosition}}>
+                  <div className="h-2 w-2 rounded-full bg-background border-2 border-primary absolute -top-1 -translate-x-1/2"></div>
+              </div>
 
-            {/* Tracks */}
-            <div className="space-y-2 mt-2">
-                <AudioTrack duration={duration} setDraggingMarkerIndex={setDraggingMarkerIndex} />
-                <VideoTrack
-                  dragItem={dragItem}
-                  dragOverItem={dragOverItem}
-                  handleTimelineDragSort={handleTimelineDragSort}
-                  handleToggleTransition={handleToggleTransition}
-                />
-            </div>
-        </div>
+              {/* Tracks */}
+              <div className="space-y-2 mt-2">
+                  <AudioTrack duration={duration} setDraggingMarkerIndex={setDraggingMarkerIndex} />
+                  <VideoTrack
+                    dragItem={dragItem}
+                    dragOverItem={dragOverItem}
+                    handleTimelineDragSort={handleTimelineDragSort}
+                    handleToggleTransition={handleToggleTransition}
+                  />
+              </div>
+          </div>
+        </ScrollArea>
       </CardContent>
     </Card>
   );
