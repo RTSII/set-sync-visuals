@@ -4,21 +4,68 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UploadCloud, Search } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
 
-const mediaClips = [
-  { id: 1, src: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=400&auto=format&fit=crop" },
-  { id: 2, src: "https://images.unsplash.com/photo-1500673922987-e212871fec22?q=80&w=400&auto=format&fit=crop" },
-  { id: 3, src: "https://images.unsplash.com/photo-1581092795360-fd1ca04f0952?q=80&w=400&auto=format&fit=crop" },
-  { id: 4, src: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?q=80&w=400&auto=format&fit=crop" },
-];
+type MediaClip = {
+  id: string;
+  src: string;
+  file: File;
+};
 
 const MediaLibrary = () => {
+  const [mediaClips, setMediaClips] = useState<MediaClip[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const newClips: MediaClip[] = Array.from(files)
+      .filter(file => file.type.startsWith('video/'))
+      .map(file => ({
+        id: crypto.randomUUID(),
+        src: URL.createObjectURL(file),
+        file: file,
+      }));
+    
+    setMediaClips(prevClips => [...prevClips, ...newClips]);
+  };
+  
+  // Clean up object URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      mediaClips.forEach(clip => URL.revokeObjectURL(clip.src));
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleDragSort = () => {
+    if (dragItem.current === null || dragOverItem.current === null || dragItem.current === dragOverItem.current) return;
+
+    setMediaClips(prevClips => {
+        const newClips = [...prevClips];
+        const draggedItemContent = newClips.splice(dragItem.current!, 1)[0];
+        if (draggedItemContent) {
+            newClips.splice(dragOverItem.current!, 0, draggedItemContent);
+        }
+        dragItem.current = null;
+        dragOverItem.current = null;
+        return newClips;
+    });
+  };
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle>Media Library</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col gap-4">
+      <CardContent className="flex-1 flex flex-col gap-4 overflow-hidden">
         <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search clips..." className="pl-10" />
@@ -28,20 +75,37 @@ const MediaLibrary = () => {
             <TabsTrigger value="project">Project</TabsTrigger>
             <TabsTrigger value="stock">Stock</TabsTrigger>
           </TabsList>
-          <TabsContent value="project" className="flex-1 mt-4">
-             <div className="grid grid-cols-2 gap-2">
-                {mediaClips.map(clip => (
-                    <div key={clip.id} className="aspect-video rounded-md overflow-hidden cursor-pointer ring-offset-background ring-primary focus-visible:ring-2 focus-visible:ring-offset-2">
-                        <img src={clip.src} className="w-full h-full object-cover"/>
-                    </div>
-                ))}
-             </div>
+          <TabsContent value="project" className="flex-1 mt-4 overflow-y-auto">
+             {mediaClips.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                    {mediaClips.map((clip, index) => (
+                        <div 
+                            key={clip.id} 
+                            className="aspect-video rounded-md overflow-hidden cursor-grab ring-offset-background ring-primary focus-visible:ring-2 focus-visible:ring-offset-2 relative group active:cursor-grabbing"
+                            draggable
+                            onDragStart={() => (dragItem.current = index)}
+                            onDragEnter={() => (dragOverItem.current = index)}
+                            onDragEnd={handleDragSort}
+                            onDragOver={(e) => e.preventDefault()}
+                        >
+                            <video src={clip.src} className="w-full h-full object-cover pointer-events-none" muted loop autoPlay playsInline/>
+                        </div>
+                    ))}
+                </div>
+             ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground border-2 border-dashed border-border rounded-lg p-4">
+                    <UploadCloud className="h-8 w-8 mb-2"/>
+                    <p className="text-sm font-semibold">Upload your video clips</p>
+                    <p className="text-xs">Drag and drop clips to reorder them</p>
+                </div>
+             )}
           </TabsContent>
           <TabsContent value="stock" className="flex-1 text-center mt-4">
             <p className="text-muted-foreground text-sm">Stock video library coming soon!</p>
           </TabsContent>
         </Tabs>
-        <Button className="w-full mt-auto">
+        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="video/*" className="hidden" multiple />
+        <Button className="w-full mt-auto" onClick={handleUploadClick}>
           <UploadCloud className="mr-2 h-4 w-4" /> Upload Video
         </Button>
       </CardContent>
