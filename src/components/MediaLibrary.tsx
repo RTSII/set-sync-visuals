@@ -1,6 +1,5 @@
-
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UploadCloud, Search } from "lucide-react";
@@ -104,11 +103,13 @@ const MediaLibrary = () => {
             <p className="text-muted-foreground text-sm">Stock video library coming soon!</p>
           </TabsContent>
         </Tabs>
+      </CardContent>
+      <CardFooter>
         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="video/*" className="hidden" multiple />
-        <Button className="w-full mt-auto" onClick={handleUploadClick}>
+        <Button className="w-full" onClick={handleUploadClick}>
           <UploadCloud className="mr-2 h-4 w-4" /> Upload Video
         </Button>
-      </CardContent>
+      </CardFooter>
     </Card>
   );
 };
