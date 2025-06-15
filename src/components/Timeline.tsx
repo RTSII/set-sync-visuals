@@ -1,14 +1,83 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Scissors, Plus, Minus, Music, Video } from "lucide-react";
+import { Scissors, Plus, Minus, AudioWaveform, Video, Upload } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
 
 const Timeline = () => {
+  const [waveform, setWaveform] = useState<number[]>([]);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const arrayBuffer = await file.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      const channelData = audioBuffer.getChannelData(0);
+      
+      const canvasWidth = 1200; // Corresponds to canvas width attribute
+      const samples = Math.floor(channelData.length / canvasWidth);
+      const waveformData: number[] = [];
+      
+      for (let i = 0; i < canvasWidth; i++) {
+          const start = samples * i;
+          let max = 0;
+          const end = start + samples;
+          for (let j = start; j < end; j++) {
+              const val = Math.abs(channelData[j] ?? 0);
+              if (val > max) {
+                  max = val;
+              }
+          }
+          waveformData.push(max);
+      }
+      setWaveform(waveformData);
+    } catch(e) {
+      console.error("Error processing audio file:", e);
+      // In a real app, you'd show a toast notification here.
+    }
+  };
+  
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  useEffect(() => {
+    if (waveform.length > 0 && canvasRef.current) {
+        const canvas = canvasRef.current;
+        const context = canvas.getContext('2d');
+        if (!context) return;
+        
+        const width = canvas.width;
+        const height = canvas.height;
+        context.clearRect(0, 0, width, height);
+        
+        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary');
+        context.fillStyle = `hsl(${primaryColor})`;
+
+        const barWidth = width / waveform.length;
+        
+        waveform.forEach((val, i) => {
+            const barHeight = val * height * 1.5; // Amplify for better visibility
+            const y = (height - barHeight) / 2;
+            context.fillRect(i * barWidth, y, barWidth * 0.9, barHeight); // 0.9 for bar spacing
+        });
+    }
+  }, [waveform]);
+
   return (
     <Card className="flex-1 flex flex-col">
       <div className="p-2 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm"><Scissors className="h-4 w-4 mr-2"/>Split</Button>
+            <Button variant="secondary" size="sm" onClick={handleUploadClick}>
+              <Upload className="h-4 w-4 mr-2"/> Upload Audio
+            </Button>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="audio/*" className="hidden" />
         </div>
         <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">00:01:15:03</span>
@@ -38,15 +107,17 @@ const Timeline = () => {
                 {/* Audio Track */}
                 <div className="h-20 bg-secondary/30 rounded-lg p-2 flex items-center gap-2">
                     <div className="w-8 h-full flex items-center justify-center bg-muted rounded">
-                        <Music className="h-5 w-5 text-foreground"/>
+                        <AudioWaveform className="h-5 w-5 text-foreground"/>
                     </div>
-                    <div 
-                        className="flex-1 h-full bg-gradient-to-r from-primary/20 via-primary/60 to-primary/20"
-                        style={{
-                            maskImage: `url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none'/%3e%3cpath d='M0,20 C40,10 60,30 100,20 S140,10 200,20' stroke='black' stroke-width='2' fill='transparent'/%3e%3c/svg%3e")`,
-                            maskSize: '200px 50px',
-                        }}
-                    ></div>
+                    <div className="flex-1 h-full relative bg-muted/30 rounded">
+                      {waveform.length > 0 ? (
+                        <canvas ref={canvasRef} className="w-full h-full" width="1200" height="80"></canvas>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-center p-4">
+                            <p className="text-muted-foreground text-sm">Upload an audio file to generate its waveform and start syncing.</p>
+                        </div>
+                      )}
+                    </div>
                 </div>
 
                 {/* Video Track */}
