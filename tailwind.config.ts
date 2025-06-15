@@ -82,12 +82,18 @@ export default {
         'glow': {
           '0%, 100%': { boxShadow: '0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary))' },
           '50%': { boxShadow: '0 0 20px hsl(var(--primary)), 0 0 30px hsl(var(--primary))' },
+        },
+        'blink': {
+          '50%': {
+            opacity: '0.2'
+          },
         }
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
         'glow': 'glow 4s ease-in-out infinite',
+        'blink': 'blink 1.5s ease-in-out infinite',
 			}
 		}
 	},
