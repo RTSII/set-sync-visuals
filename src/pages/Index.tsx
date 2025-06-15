@@ -1,12 +1,22 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import Header from "@/components/Header";
+import MediaLibrary from "@/components/MediaLibrary";
+import Timeline from "@/components/Timeline";
+import VideoPreview from "@/components/VideoPreview";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-background font-sans flex flex-col text-foreground">
+      <Header />
+      <main className="flex-1 flex gap-4 p-4 pt-20">
+        <div className="flex-[3] flex flex-col gap-4">
+            <VideoPreview />
+            <Timeline />
+        </div>
+        <div className="flex-[1] flex flex-col">
+            <MediaLibrary />
+        </div>
+      </main>
     </div>
   );
 };
