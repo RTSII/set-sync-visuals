@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
@@ -10,10 +9,13 @@ const VideoPreview = () => {
     videoRef, 
     isPlaying, 
     togglePlay,
+    handleClipEnded,
     currentTime,
     setCurrentTime,
     duration,
     setDuration,
+    wasPlaying,
+    setWasPlaying,
   } = useEditor();
 
   const handleTimeUpdate = () => {
@@ -25,6 +27,10 @@ const VideoPreview = () => {
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
       setDuration(videoRef.current.duration);
+      if (wasPlaying) {
+        videoRef.current.play().catch(e => console.error("Autoplay failed", e));
+        setWasPlaying(false);
+      }
     }
   };
 
@@ -47,7 +53,7 @@ const VideoPreview = () => {
                 className="w-full h-full object-contain"
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
-                onEnded={togglePlay}
+                onEnded={handleClipEnded}
                 onClick={togglePlay}
             />
         ) : (

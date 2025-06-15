@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useRef, useEffect } from 'react';
 
 // This type will be shared between components
@@ -16,6 +15,7 @@ interface EditorContextType {
   // Playback State
   isPlaying: boolean;
   togglePlay: () => void;
+  handleClipEnded: () => void;
   currentTime: number;
   setCurrentTime: React.Dispatch<React.SetStateAction<number>>;
   duration: number;
@@ -28,6 +28,14 @@ interface EditorContextType {
   audioRef: React.RefObject<HTMLAudioElement>;
   audioSrc: string | null;
   setAudioSrc: React.Dispatch<React.SetStateAction<string | null>>;
+  loadAudio: (file: File) => Promise<void>;
+  
+  // Waveform
+  waveform: number[];
+  
+  // Autoplay signal
+  wasPlaying: boolean;
+  setWasPlaying: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -39,6 +47,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const [duration, setDuration] = useState(0);
   const [selectedClip, setSelectedClip] = useState<MediaClip | null>(null);
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
+  const [waveform, setWaveform] = useState<number[]>([]);
+  const [wasPlaying, setWasPlaying] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -63,11 +73,44 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     // Sync audio current time with video current time
     const video = videoRef.current;
     const audio = audioRef.current;
-    if (video && audio && Math.abs(video.currentTime - audio.currentTime) > 0.2) {
+    if (video && audio && isPlaying && Math.abs(video.currentTime - audio.currentTime) > 0.2) {
       audio.currentTime = video.currentTime;
     }
-  }, [currentTime]);
+  }, [currentTime, isPlaying]);
 
+
+  const loadAudio = async (file: File) => {
+    const objectUrl = URL.createObjectURL(file);
+    setAudioSrc(objectUrl);
+
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const arrayBuffer = await file.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      const channelData = audioBuffer.getChannelData(0);
+      
+      const canvasWidth = 1200; // Corresponds to canvas width attribute
+      const samples = Math.floor(channelData.length / canvasWidth);
+      const waveformData: number[] = [];
+      
+      for (let i = 0; i < canvasWidth; i++) {
+          const start = samples * i;
+          let max = 0;
+          const end = start + samples;
+          for (let j = start; j < end; j++) {
+              const val = Math.abs(channelData[j] ?? 0);
+              if (val > max) {
+                  max = val;
+              }
+          }
+          waveformData.push(max);
+      }
+      setWaveform(waveformData);
+    } catch(e) {
+      console.error("Error processing audio file:", e);
+    }
+  };
 
   const togglePlay = () => {
     if (!selectedClip || !videoRef.current) return;
@@ -80,6 +123,21 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     } else {
       video.pause();
       audio?.pause();
+    }
+  };
+
+  const handleClipEnded = () => {
+    if (!selectedClip) return;
+    
+    const currentIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
+    const isLastClip = currentIndex === timelineClips.length - 1;
+
+    if (currentIndex > -1 && !isLastClip) {
+        const nextClip = timelineClips[currentIndex + 1];
+        if (nextClip) {
+          setWasPlaying(true);
+          setSelectedClip(nextClip);
+        }
     }
   };
 
@@ -103,6 +161,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     setTimelineClips,
     isPlaying,
     togglePlay,
+    handleClipEnded,
     currentTime,
     setCurrentTime,
     duration,
@@ -113,6 +172,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     audioRef,
     audioSrc,
     setAudioSrc,
+    loadAudio,
+    waveform,
+    wasPlaying,
+    setWasPlaying,
   };
 
   return (

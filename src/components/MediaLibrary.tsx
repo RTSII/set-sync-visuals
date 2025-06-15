@@ -1,24 +1,28 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UploadCloud, Search, Plus } from "lucide-react";
+import { UploadCloud, Search, Plus, Music } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
 import { useEditor, MediaClip } from "@/context/EditorContext";
 
 const MediaLibrary = () => {
   const [mediaClips, setMediaClips] = useState<MediaClip[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
-  const { addClipToTimeline } = useEditor();
+  const { addClipToTimeline, loadAudio } = useEditor();
 
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
+  const handleUploadVideoClick = () => {
+    videoInputRef.current?.click();
+  };
+  
+  const handleUploadAudioClick = () => {
+    audioInputRef.current?.click();
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
@@ -33,6 +37,15 @@ const MediaLibrary = () => {
     setMediaClips(prevClips => [...prevClips, ...newClips]);
   };
   
+  const handleAudioFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    if (file.type.startsWith('audio/')) {
+        loadAudio(file);
+    }
+  };
+
   // Clean up object URLs on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
@@ -65,9 +78,9 @@ const MediaLibrary = () => {
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
-        <CardTitle>Media Library</CardTitle>
+        <CardTitle>Load Media</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col gap-4 overflow-hidden">
+      <CardContent className="flex-1 flex col gap-4 overflow-hidden">
         <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search clips..." className="pl-10" />
@@ -102,8 +115,8 @@ const MediaLibrary = () => {
              ) : (
                 <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground border-2 border-dashed border-border rounded-lg p-4">
                     <UploadCloud className="h-8 w-8 mb-2"/>
-                    <p className="text-sm font-semibold">Upload your video clips</p>
-                    <p className="text-xs">Drag and drop clips to reorder them</p>
+                    <p className="text-sm font-semibold">Upload your media</p>
+                    <p className="text-xs">Drag and drop video clips to reorder them</p>
                 </div>
              )}
           </TabsContent>
@@ -112,10 +125,14 @@ const MediaLibrary = () => {
           </TabsContent>
         </Tabs>
       </CardContent>
-      <CardFooter>
-        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="video/*" className="hidden" multiple />
-        <Button className="w-full" onClick={handleUploadClick}>
+      <CardFooter className="flex-col items-stretch gap-2">
+        <input type="file" ref={videoInputRef} onChange={handleVideoFileChange} accept="video/*" className="hidden" multiple />
+        <input type="file" ref={audioInputRef} onChange={handleAudioFileChange} accept="audio/*" className="hidden" />
+        <Button className="w-full" onClick={handleUploadVideoClick}>
           <UploadCloud className="mr-2 h-4 w-4" /> Upload Video
+        </Button>
+        <Button className="w-full" variant="secondary" onClick={handleUploadAudioClick}>
+          <Music className="mr-2 h-4 w-4" /> Upload Audio
         </Button>
       </CardFooter>
     </Card>

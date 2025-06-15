@@ -1,14 +1,11 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Scissors, Plus, Minus, AudioWaveform, Video, Upload } from "lucide-react";
-import React, { useState, useRef, useEffect } from "react";
+import { Scissors, Plus, Minus, AudioWaveform, Video } from "lucide-react";
+import React, { useRef, useEffect } from "react";
 import { useEditor } from "@/context/EditorContext";
 
 const Timeline = () => {
-  const [waveform, setWaveform] = useState<number[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { 
     timelineClips, 
     setTimelineClips, 
@@ -18,49 +15,12 @@ const Timeline = () => {
     currentTime,
     duration,
     audioSrc,
-    setAudioSrc,
-    audioRef
+    audioRef,
+    waveform,
   } = useEditor();
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const objectUrl = URL.createObjectURL(file);
-    setAudioSrc(objectUrl);
-
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const arrayBuffer = await file.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      
-      const channelData = audioBuffer.getChannelData(0);
-      
-      const canvasWidth = 1200; // Corresponds to canvas width attribute
-      const samples = Math.floor(channelData.length / canvasWidth);
-      const waveformData: number[] = [];
-      
-      for (let i = 0; i < canvasWidth; i++) {
-          const start = samples * i;
-          let max = 0;
-          const end = start + samples;
-          for (let j = start; j < end; j++) {
-              const val = Math.abs(channelData[j] ?? 0);
-              if (val > max) {
-                  max = val;
-              }
-          }
-          waveformData.push(max);
-      }
-      setWaveform(waveformData);
-    } catch(e) {
-      console.error("Error processing audio file:", e);
-      // In a real app, you'd show a toast notification here.
-    }
-  };
-  
   useEffect(() => {
     return () => {
       if (audioSrc) {
@@ -68,10 +28,6 @@ const Timeline = () => {
       }
     }
   }, [audioSrc]);
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
 
   useEffect(() => {
     if (waveform.length > 0 && canvasRef.current) {
@@ -132,10 +88,6 @@ const Timeline = () => {
       <div className="p-2 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm"><Scissors className="h-4 w-4 mr-2"/>Split</Button>
-            <Button variant="secondary" size="sm" onClick={handleUploadClick}>
-              <Upload className="h-4 w-4 mr-2"/> Upload Audio
-            </Button>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="audio/*" className="hidden" />
         </div>
         <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">00:01:15:03</span>
@@ -176,7 +128,7 @@ const Timeline = () => {
                         <canvas ref={canvasRef} className="w-full h-full" width="1200" height="80"></canvas>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-center p-4">
-                            <p className="text-muted-foreground text-sm">Upload an audio file to generate its waveform and start syncing.</p>
+                            <p className="text-muted-foreground text-sm">Upload an audio file from the media library to generate its waveform.</p>
                         </div>
                       )}
                     </div>
