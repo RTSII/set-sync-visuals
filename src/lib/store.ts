@@ -26,13 +26,8 @@ interface EditorState {
   setAudioFile: (file: File | null) => void;
   
   audioMarkers: number[];
-  setAudioMarkers: (updater) => set(state => ({ audioMarkers: typeof updater === 'function' ? updater(state.audioMarkers) : updater })),
-  addAudioMarker: (time: number) => {
-    // Avoid duplicate markers at the same spot
-    if (!get().audioMarkers.some(m => Math.abs(m - time) < 0.1)) {
-      set(state => ({ audioMarkers: [...state.audioMarkers, time].sort((a, b) => a - b) }));
-    }
-  };
+  setAudioMarkers: (updater: number[] | ((markers: number[]) => number[])) => void;
+  addAudioMarker: (time: number) => void;
 
   waveform: number[];
   setWaveform: (data: number[]) => void;
@@ -90,7 +85,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   audioMarkers: [],
   setAudioMarkers: (updater) => set(state => ({ audioMarkers: typeof updater === 'function' ? updater(state.audioMarkers) : updater })),
-  addAudioMarker: (time) => {
+  addAudioMarker: (time: number) => {
     // Avoid duplicate markers at the same spot
     if (!get().audioMarkers.some(m => Math.abs(m - time) < 0.1)) {
       set(state => ({ audioMarkers: [...state.audioMarkers, time].sort((a, b) => a - b) }));
