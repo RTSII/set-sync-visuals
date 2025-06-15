@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Scissors, Plus, Minus, AudioWaveform, Video } from "lucide-react";
@@ -119,13 +120,13 @@ const Timeline = () => {
             {/* Tracks */}
             <div className="space-y-2">
                 {/* Audio Track */}
-                <div className="h-20 bg-secondary/30 rounded-lg p-2 flex items-center gap-2">
+                <div className="h-28 bg-secondary/30 rounded-lg p-2 flex items-center gap-2">
                     <div className="w-8 h-full flex items-center justify-center bg-muted rounded">
                         <AudioWaveform className="h-5 w-5 text-foreground"/>
                     </div>
                     <div className="flex-1 h-full relative bg-muted/30 rounded">
                       {waveform.length > 0 ? (
-                        <canvas ref={canvasRef} className="w-full h-full" width="1200" height="80"></canvas>
+                        <canvas ref={canvasRef} className="w-full h-full" width="1200" height="96"></canvas>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-center p-4">
                             <p className="text-muted-foreground text-sm">Upload an audio file from the media library to generate its waveform.</p>
@@ -135,7 +136,7 @@ const Timeline = () => {
                 </div>
 
                 {/* Video Track */}
-                <div className="h-20 bg-secondary/30 rounded-lg p-2 flex items-center gap-2">
+                <div className="h-28 bg-secondary/30 rounded-lg p-2 flex items-center gap-2">
                     <div className="w-8 h-full flex items-center justify-center bg-muted rounded">
                         <Video className="h-5 w-5 text-foreground"/>
                     </div>
