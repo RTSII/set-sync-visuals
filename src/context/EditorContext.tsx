@@ -36,6 +36,14 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     currentTime
   } = useEditorStore();
 
+  // Auto-select first clip when clips are added
+  useEffect(() => {
+    if (timelineClips.length > 0 && !selectedClip) {
+      console.log("Auto-selecting first clip:", timelineClips[0].id);
+      setSelectedClip(timelineClips[0]);
+    }
+  }, [timelineClips, selectedClip, setSelectedClip]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -103,9 +111,14 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const handleClipEnded = () => {
-    if (!selectedClip || timelineClips.length === 0) return;
+    console.log("Clip ended, checking for next clip");
+    if (!selectedClip || timelineClips.length === 0) {
+      console.log("No selected clip or no clips in timeline");
+      return;
+    }
     
     const currentIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
+    console.log(`Current clip index: ${currentIndex}, total clips: ${timelineClips.length}`);
     
     if (currentIndex >= 0 && currentIndex < timelineClips.length - 1) {
       // Move to next clip in sequence (left to right)
@@ -116,6 +129,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     } else {
       // Last clip or clip not found, stop playing
       console.log("Reached end of timeline, stopping playback");
+      const video = videoRef.current;
+      const audio = audioRef.current;
+      if (video) video.pause();
+      if (audio) audio.pause();
       setIsPlaying(false);
     }
   };

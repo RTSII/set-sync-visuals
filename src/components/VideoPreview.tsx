@@ -39,14 +39,16 @@ const VideoPreview = () => {
       const clipStartTime = selectedClip.startTime ?? 0;
       const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
       
+      console.log(`Time update - absolute: ${absoluteTime}, start: ${clipStartTime}, end: ${clipEndTime}`);
+      
       // Check if we've reached the end of the current clip
-      if (absoluteTime >= clipEndTime) {
-        console.log("Clip ended, triggering handleClipEnded");
-        videoRef.current.pause();
+      if (absoluteTime >= clipEndTime - 0.1) { // Small buffer to prevent timing issues
+        console.log("Clip ended based on time, triggering handleClipEnded");
         handleClipEnded();
       } else {
         // Update the display time relative to clip start
-        setCurrentTime(absoluteTime - clipStartTime);
+        const relativeTime = absoluteTime - clipStartTime;
+        setCurrentTime(Math.max(0, relativeTime));
       }
     }
   };
@@ -86,6 +88,11 @@ const VideoPreview = () => {
         }
       }
     }
+  };
+
+  const handleVideoEnded = () => {
+    console.log("Video ended event triggered");
+    handleClipEnded();
   };
 
   React.useEffect(() => {
@@ -140,7 +147,7 @@ const VideoPreview = () => {
                 className="w-full h-full object-contain"
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
-                onEnded={handleClipEnded}
+                onEnded={handleVideoEnded}
                 onClick={togglePlay}
                 preload="metadata"
             />

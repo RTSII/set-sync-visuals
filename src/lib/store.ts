@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { MediaClip, Transition } from '@/types';
 
@@ -54,7 +53,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   updateClip: (clipId, newProps) => set(state => ({
     timelineClips: state.timelineClips.map(clip => 
       clip.id === clipId ? { ...clip, ...newProps } : clip
-    )
+    ),
+    // Update selectedClip if it's the one being updated
+    selectedClip: state.selectedClip?.id === clipId ? { ...state.selectedClip, ...newProps } : state.selectedClip
   })),
   addClipToTimeline: (clip) => {
     if (!get().timelineClips.find(c => c.id === clip.id)) {
@@ -66,10 +67,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           originalDuration: 0, // Will be updated on video load
         };
         const newClips = [...state.timelineClips, newClip];
-        // If this is the first clip, select it automatically
-        if (newClips.length === 1) {
-          return { timelineClips: newClips, selectedClip: newClip };
-        }
+        console.log(`Added clip to timeline: ${clip.id}, total clips: ${newClips.length}`);
         return { timelineClips: newClips };
       });
     }
@@ -85,7 +83,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setDuration: (duration) => set({ duration }),
 
   selectedClip: null,
-  setSelectedClip: (clip) => set({ selectedClip: clip, trimmingClipId: null }),
+  setSelectedClip: (clip) => {
+    console.log("Setting selected clip:", clip?.id);
+    set({ selectedClip: clip, trimmingClipId: null });
+  },
 
   audioSrc: null,
   setAudioSrc: (src) => set({ audioSrc: src }),
