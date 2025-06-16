@@ -102,7 +102,7 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
                 style={{ width: `${STANDARD_CLIP_WIDTH}px` }}
               >
                 <div
-                 className={`w-full h-full rounded-sm relative overflow-hidden cursor-pointer active:cursor-grabbing ${selectedClip?.id === clip.id && !trimmingClipId ? 'ring-1 ring-primary ring-offset-1 ring-offset-background' : ''}`}
+                 className={`w-full h-full rounded-sm relative overflow-hidden cursor-pointer active:cursor-grabbing border-2 ${selectedClip?.id === clip.id && !trimmingClipId ? 'border-primary bg-primary/20' : 'border-muted bg-muted'} hover:bg-primary/10 transition-colors`}
                  draggable
                  onClick={() => setSelectedClip(clip)}
                  onDoubleClick={(e) => handleDoubleClick(e, clip.id)}
@@ -111,9 +111,11 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
                  onDragEnd={handleTimelineDragSort}
                  onDragOver={(e) => e.stopPropagation()}
                 >
-                  <video src={clip.src} className="w-full h-full object-cover pointer-events-none" muted />
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-                  <p className="absolute bottom-0 left-0 text-[6px] text-white bg-black/50 px-0.5 rounded-sm truncate pointer-events-none max-w-full">
+                  {/* Simple clip representation without video preview */}
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Video className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  <p className="absolute bottom-0 left-0 text-[6px] text-foreground bg-background/80 px-0.5 rounded-sm truncate pointer-events-none max-w-full">
                       {clip.file.name}
                   </p>
                   {/* Add transition button - only show on hover if no transition exists */}

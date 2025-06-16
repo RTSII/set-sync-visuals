@@ -164,6 +164,7 @@ const VideoPreview = () => {
               </div>
             </div>
         )}
+        {/* Only show play button when paused */}
         {selectedClip && !isPlaying && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
                 <Button size="icon" className="w-16 h-16 rounded-full bg-primary/80 hover:bg-primary animate-glow pointer-events-auto" onClick={togglePlay}>

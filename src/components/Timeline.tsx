@@ -29,12 +29,42 @@ const Timeline = () => {
     audioMarkers,
     addAudioMarker,
     setAudioMarkers,
+    selectedClip,
   } = useEditorStore();
 
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const ffmpegRef = useRef(new FFmpeg());
   const [draggingMarkerIndex, setDraggingMarkerIndex] = useState<number | null>(null);
+
+  // Calculate playhead position based on current clip and time
+  const getPlayheadPosition = () => {
+    if (!selectedClip || timelineClips.length === 0) return '0%';
+    
+    const currentClipIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
+    if (currentClipIndex === -1) return '0%';
+    
+    // Calculate total duration of clips before current clip
+    let totalDurationBefore = 0;
+    for (let i = 0; i < currentClipIndex; i++) {
+      const clip = timelineClips[i];
+      const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
+      totalDurationBefore += clipDuration;
+    }
+    
+    // Add current time within current clip
+    const totalCurrentTime = totalDurationBefore + currentTime;
+    
+    // Calculate total duration of all clips
+    const totalDuration = timelineClips.reduce((acc, clip) => {
+      const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
+      return acc + clipDuration;
+    }, 0);
+    
+    if (totalDuration === 0) return '0%';
+    
+    return `${Math.min(100, (totalCurrentTime / totalDuration) * 100)}%`;
+  };
 
   useEffect(() => {
     return () => {
@@ -170,7 +200,7 @@ const Timeline = () => {
     }
   };
 
-  const playheadPosition = duration > 0 ? `${(currentTime / duration) * 100}%` : '0%';
+  const playheadPosition = getPlayheadPosition();
 
   return (
     <Card className="flex flex-col h-full bg-transparent border-0 shadow-none overflow-hidden">
@@ -191,9 +221,10 @@ const Timeline = () => {
         >
             <TimelineRuler />
             
-            {/* Playhead */}
-            <div className="absolute top-4 bottom-0 w-0.5 bg-primary z-20" style={{left: playheadPosition}}>
-                <div className="h-1.5 w-1.5 rounded-full bg-background border border-primary absolute -top-0.5 -translate-x-1/2"></div>
+            {/* Enhanced playhead */}
+            <div className="absolute top-4 bottom-0 w-0.5 bg-primary z-30 shadow-lg" style={{left: playheadPosition}}>
+                <div className="h-2 w-2 rounded-full bg-primary border-2 border-background absolute -top-1 -translate-x-1/2 shadow-lg"></div>
+                <div className="absolute top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-primary/80 to-primary/60"></div>
             </div>
 
             {/* Tracks */}
