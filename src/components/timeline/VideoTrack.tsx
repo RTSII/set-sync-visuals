@@ -111,8 +111,8 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
                  onDragEnd={handleTimelineDragSort}
                  onDragOver={(e) => e.stopPropagation()}
                 >
-                  {/* Simple clip representation without video preview */}
-                  <div className="w-full h-full flex items-center justify-center">
+                  {/* Static video icon instead of video preview */}
+                  <div className="w-full h-full flex items-center justify-center bg-muted/50">
                     <Video className="h-3 w-3 text-muted-foreground" />
                   </div>
                   <p className="absolute bottom-0 left-0 text-[6px] text-foreground bg-background/80 px-0.5 rounded-sm truncate pointer-events-none max-w-full">

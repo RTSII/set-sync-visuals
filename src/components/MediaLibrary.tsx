@@ -1,8 +1,7 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UploadCloud, Search, Plus, Music } from "lucide-react";
+import { UploadCloud, Plus, Music, Video } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
 import { useEditorStore } from "@/lib/store";
 import { MediaClip } from "@/types";
@@ -82,49 +81,42 @@ const MediaLibrary = () => {
         <CardTitle className="text-sm">Load Media</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col gap-2 overflow-hidden p-3 pt-0">
-        <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-            <Input placeholder="Search clips..." className="pl-7 h-7 text-xs" />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {mediaClips.length > 0 ? (
+            <div className="grid grid-cols-2 gap-1 overflow-y-auto max-h-full">
+              {mediaClips.map((clip, index) => (
+                <div 
+                  key={clip.id} 
+                  className="aspect-video rounded-sm overflow-hidden cursor-grab ring-offset-background ring-primary focus-visible:ring-1 focus-visible:ring-offset-1 relative group active:cursor-grabbing bg-muted/50"
+                  draggable
+                  onDragStart={(e) => handleClipDragStart(e, clip, index)}
+                  onDragEnter={() => (dragOverItem.current = index)}
+                  onDragEnd={handleDragSort}
+                  onDragOver={(e) => e.preventDefault()}
+                >
+                  {/* Static video icon instead of preview */}
+                  <div className="w-full h-full flex items-center justify-center bg-muted/30">
+                    <Video className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 truncate">
+                    {clip.file.name}
+                  </div>
+                  <div className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 rounded-full">
+                    <Button size="icon" variant="ghost" className="h-5 w-5 text-white hover:bg-white/20 hover:text-white" onClick={() => addClipToTimeline(clip)}>
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground border border-dashed border-border rounded-lg p-2">
+              <UploadCloud className="h-6 w-6 mb-1"/>
+              <p className="text-xs font-medium">Upload your media</p>
+              <p className="text-xs opacity-75">Drag and drop to reorder</p>
+            </div>
+          )}
         </div>
-        <Tabs defaultValue="project" className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-2 h-7">
-            <TabsTrigger value="project" className="text-xs">Project</TabsTrigger>
-            <TabsTrigger value="stock" className="text-xs">Stock</TabsTrigger>
-          </TabsList>
-          <TabsContent value="project" className="flex-1 mt-2 overflow-hidden">
-             {mediaClips.length > 0 ? (
-                <div className="grid grid-cols-2 gap-1 overflow-y-auto max-h-full">
-                    {mediaClips.map((clip, index) => (
-                        <div 
-                            key={clip.id} 
-                            className="aspect-video rounded-sm overflow-hidden cursor-grab ring-offset-background ring-primary focus-visible:ring-1 focus-visible:ring-offset-1 relative group active:cursor-grabbing"
-                            draggable
-                            onDragStart={(e) => handleClipDragStart(e, clip, index)}
-                            onDragEnter={() => (dragOverItem.current = index)}
-                            onDragEnd={handleDragSort}
-                            onDragOver={(e) => e.preventDefault()}
-                        >
-                            <video src={clip.src} className="w-full h-full object-cover pointer-events-none" muted loop autoPlay playsInline/>
-                            <div className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 rounded-full">
-                                <Button size="icon" variant="ghost" className="h-5 w-5 text-white hover:bg-white/20 hover:text-white" onClick={() => addClipToTimeline(clip)}>
-                                    <Plus className="h-3 w-3" />
-                                </Button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-             ) : (
-                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground border border-dashed border-border rounded-lg p-2">
-                    <UploadCloud className="h-6 w-6 mb-1"/>
-                    <p className="text-xs font-medium">Upload your media</p>
-                    <p className="text-xs opacity-75">Drag and drop to reorder</p>
-                </div>
-             )}
-          </TabsContent>
-          <TabsContent value="stock" className="flex-1 text-center mt-2">
-            <p className="text-muted-foreground text-xs">Stock video library coming soon!</p>
-          </TabsContent>
-        </Tabs>
       </CardContent>
       <CardFooter className="flex-col items-stretch gap-1 p-3 pt-1">
         <input type="file" ref={videoInputRef} onChange={handleVideoFileChange} accept="video/*" className="hidden" multiple />
