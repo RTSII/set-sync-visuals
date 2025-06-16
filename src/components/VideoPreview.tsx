@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
@@ -32,12 +33,16 @@ const VideoPreview = () => {
   const handleTimeUpdate = () => {
     if (videoRef.current && selectedClip) {
       const absoluteTime = videoRef.current.currentTime;
-      if (absoluteTime >= (selectedClip.endTime ?? videoRef.current.duration)) {
+      const clipStartTime = selectedClip.startTime ?? 0;
+      const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
+      
+      // Check if we've reached the end of the current clip
+      if (absoluteTime >= clipEndTime) {
         videoRef.current.pause();
-        setCurrentTime(clipDisplayDuration);
         handleClipEnded();
       } else {
-        setCurrentTime(absoluteTime - (selectedClip.startTime ?? 0));
+        // Update the display time relative to clip start
+        setCurrentTime(absoluteTime - clipStartTime);
       }
     }
   };
@@ -45,20 +50,30 @@ const VideoPreview = () => {
   const handleLoadedMetadata = () => {
     if (videoRef.current && selectedClip) {
       const videoDuration = videoRef.current.duration;
-      // If clip just added, populate its duration properties
+      
+      // Initialize clip properties if not set
       if (!selectedClip.originalDuration) {
         updateClip(selectedClip.id, {
           startTime: 0,
           endTime: videoDuration,
           originalDuration: videoDuration,
         });
+        setClipDisplayDuration(videoDuration);
       } else {
-        // For subsequent loads of an already-initialized clip
-        videoRef.current.currentTime = selectedClip.startTime ?? 0;
-        setClipDisplayDuration((selectedClip.endTime ?? videoDuration) - (selectedClip.startTime ?? 0));
-        setCurrentTime(0); // Reset playhead for this clip
+        // Set up playback for an existing clip
+        const clipStartTime = selectedClip.startTime ?? 0;
+        const clipEndTime = selectedClip.endTime ?? videoDuration;
+        const clipDuration = clipEndTime - clipStartTime;
+        
+        videoRef.current.currentTime = clipStartTime;
+        setClipDisplayDuration(clipDuration);
+        setCurrentTime(0);
+        
+        // Auto-play if this was triggered by clip switching
         if (wasPlaying) {
-          videoRef.current.play().catch(e => console.error("Autoplay failed", e));
+          setTimeout(() => {
+            videoRef.current?.play().catch(e => console.error("Autoplay failed", e));
+          }, 100);
           setWasPlaying(false);
         }
       }
@@ -66,14 +81,17 @@ const VideoPreview = () => {
   };
 
   React.useEffect(() => {
-    // Effect to react to store updates from handleLoadedMetadata
-    if (videoRef.current && selectedClip && (selectedClip.originalDuration ?? 0) > 0) {
-      const videoDuration = videoRef.current.duration;
-      videoRef.current.currentTime = selectedClip.startTime ?? 0;
-      setClipDisplayDuration((selectedClip.endTime ?? videoDuration) - (selectedClip.startTime ?? 0));
+    // React to clip changes and ensure proper setup
+    if (videoRef.current && selectedClip && selectedClip.originalDuration) {
+      const clipStartTime = selectedClip.startTime ?? 0;
+      const clipEndTime = selectedClip.endTime ?? selectedClip.originalDuration;
+      const clipDuration = clipEndTime - clipStartTime;
+      
+      videoRef.current.currentTime = clipStartTime;
+      setClipDisplayDuration(clipDuration);
       setCurrentTime(0);
     }
-  }, [selectedClip?.id, selectedClip?.endTime, selectedClip?.startTime, selectedClip?.originalDuration]);
+  }, [selectedClip?.id, selectedClip?.startTime, selectedClip?.endTime]);
 
   const jumpToStart = () => {
     if (videoRef.current && selectedClip) {
@@ -84,9 +102,10 @@ const VideoPreview = () => {
 
   const jumpToEnd = () => {
     if (videoRef.current && selectedClip) {
-      const newTime = selectedClip.endTime ?? videoRef.current.duration;
-      videoRef.current.currentTime = newTime;
-      setCurrentTime(newTime - (selectedClip.startTime ?? 0));
+      const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
+      const clipStartTime = selectedClip.startTime ?? 0;
+      videoRef.current.currentTime = clipEndTime;
+      setCurrentTime(clipEndTime - clipStartTime);
     }
   };
 
@@ -112,7 +131,7 @@ const VideoPreview = () => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   };
 
-  const progressPercentage = clipDisplayDuration > 0 ? (currentTime / clipDisplayDuration) * 100 : 0;
+  const progressPercentage = clipDisplayDuration > 0 ? Math.min(100, (currentTime / clipDisplayDuration) * 100) : 0;
 
   return (
     <div ref={previewContainerRef} className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
@@ -126,6 +145,7 @@ const VideoPreview = () => {
                 onLoadedMetadata={handleLoadedMetadata}
                 onEnded={handleClipEnded}
                 onClick={togglePlay}
+                preload="metadata"
             />
         ) : (
             <div className="w-full h-full flex items-center justify-center flex-col gap-4">

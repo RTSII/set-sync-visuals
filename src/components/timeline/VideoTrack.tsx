@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useEditorStore } from '@/lib/store';
 import { Button } from "@/components/ui/button";
@@ -75,31 +76,32 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
   }
 
   return (
-    <div className="h-12 bg-secondary/30 rounded-md p-1 flex items-center gap-1">
-      <div className="w-6 h-full flex items-center justify-center bg-muted rounded flex-shrink-0">
-          <Video className="h-3 w-3 text-foreground"/>
+    <div className="h-10 bg-secondary/30 rounded-md p-1 flex items-center gap-0.5">
+      <div className="w-5 h-full flex items-center justify-center bg-muted rounded flex-shrink-0">
+          <Video className="h-2.5 w-2.5 text-foreground"/>
       </div>
-      <div className="flex-1 h-full flex items-center gap-1">
+      <div className="flex-1 h-full flex items-center gap-0.5">
           {timelineClips.map((clip, index) => (
              <React.Fragment key={clip.id}>
-              {index > 0 && (
-                <div className="w-4 h-full flex items-center justify-center flex-shrink-0">
+              {/* Only show transition button if the clip actually has a transition */}
+              {index > 0 && clip.transition && (
+                <div className="w-3 h-full flex items-center justify-center flex-shrink-0">
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="w-3 h-3 rounded-full hover:bg-primary/20"
+                    className="w-2.5 h-2.5 rounded-full hover:bg-primary/20"
                     onClick={() => handleToggleTransition(clip.id, clip.transition)}
                   >
-                    <GitMerge className={`h-2 w-2 transition-colors ${clip.transition ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <GitMerge className="h-1.5 w-1.5 text-primary" />
                   </Button>
                 </div>
               )}
               <div
-                className="relative h-full flex-shrink-0"
+                className="relative h-full flex-shrink-0 group"
                 style={{ width: `${Math.max(MIN_CLIP_DURATION * PIXELS_PER_SECOND, ((clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0)) * PIXELS_PER_SECOND)}px`}}
               >
                 <div
-                 className={`w-full h-full rounded-sm relative overflow-hidden cursor-pointer active:cursor-grabbing group ${selectedClip?.id === clip.id && !trimmingClipId ? 'ring-1 ring-primary ring-offset-1 ring-offset-background' : ''}`}
+                 className={`w-full h-full rounded-sm relative overflow-hidden cursor-pointer active:cursor-grabbing ${selectedClip?.id === clip.id && !trimmingClipId ? 'ring-1 ring-primary ring-offset-1 ring-offset-background' : ''}`}
                  draggable
                  onClick={() => setSelectedClip(clip)}
                  onDoubleClick={(e) => handleDoubleClick(e, clip.id)}
@@ -110,9 +112,28 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
                 >
                   <video src={clip.src} className="w-full h-full object-cover pointer-events-none" muted />
                   <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-                  <p className="absolute bottom-0 left-0 text-xs text-white bg-black/50 px-1 rounded-sm truncate pointer-events-none max-w-full text-[10px]">
+                  <p className="absolute bottom-0 left-0 text-[8px] text-white bg-black/50 px-0.5 rounded-sm truncate pointer-events-none max-w-full">
                       {clip.file.name}
                   </p>
+                  {/* Context menu for adding transitions (right-click) */}
+                  {index > 0 && !clip.transition && (
+                    <div 
+                      className="absolute -left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleTransition(clip.id, null);
+                      }}
+                    >
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="w-2 h-2 rounded-full bg-background/80 hover:bg-primary/20 border"
+                        title="Add transition"
+                      >
+                        <GitMerge className="h-1 w-1 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 {trimmingClipId === clip.id && (
                   <>
@@ -121,13 +142,13 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
                         className="absolute -left-0.5 top-0 bottom-0 w-1 bg-primary/80 hover:bg-primary transition-colors cursor-ew-resize z-20 flex items-center justify-center rounded-l-sm"
                         onMouseDown={(e) => handleTrimMouseDown(e, clip, 'left')}
                     >
-                      <div className="w-0.5 h-2 bg-primary-foreground/70 rounded-full" />
+                      <div className="w-0.5 h-1.5 bg-primary-foreground/70 rounded-full" />
                     </div>
                     <div
                         className="absolute -right-0.5 top-0 bottom-0 w-1 bg-primary/80 hover:bg-primary transition-colors cursor-ew-resize z-20 flex items-center justify-center rounded-r-sm"
                         onMouseDown={(e) => handleTrimMouseDown(e, clip, 'right')}
                     >
-                      <div className="w-0.5 h-2 bg-primary-foreground/70 rounded-full" />
+                      <div className="w-0.5 h-1.5 bg-primary-foreground/70 rounded-full" />
                     </div>
                   </>
                 )}

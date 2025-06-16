@@ -76,23 +76,29 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const jumpToStart = () => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0;
-      setCurrentTime(0);
-    }
+    if (!selectedClip || !videoRef.current) return;
+    const video = videoRef.current;
+    const clipStartTime = selectedClip.startTime ?? 0;
+    
+    video.currentTime = clipStartTime;
+    setCurrentTime(0);
+    
     if (audioRef.current) {
-      audioRef.current.currentTime = 0;
+      audioRef.current.currentTime = clipStartTime;
     }
   };
 
   const jumpToEnd = () => {
-    if (videoRef.current) {
-      const newTime = videoRef.current.duration;
-      videoRef.current.currentTime = newTime;
-      setCurrentTime(newTime);
-      if (audioRef.current) {
-        audioRef.current.currentTime = newTime;
-      }
+    if (!selectedClip || !videoRef.current) return;
+    const video = videoRef.current;
+    const clipEndTime = selectedClip.endTime ?? video.duration;
+    const clipStartTime = selectedClip.startTime ?? 0;
+    
+    video.currentTime = clipEndTime;
+    setCurrentTime(clipEndTime - clipStartTime);
+    
+    if (audioRef.current) {
+      audioRef.current.currentTime = clipEndTime;
     }
   };
 
@@ -105,9 +111,13 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     if (currentIndex > -1 && !isLastClip) {
         const nextClip = timelineClips[currentIndex + 1];
         if (nextClip) {
-          setWasPlaying(true);
+          console.log(`Switching from clip ${selectedClip.id} to ${nextClip.id}`);
+          setWasPlaying(isPlaying); // Remember if we were playing
           setSelectedClip(nextClip);
         }
+    } else {
+        // If it's the last clip, just stop playing
+        setIsPlaying(false);
     }
   };
 
