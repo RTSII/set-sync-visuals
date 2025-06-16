@@ -11,6 +11,8 @@ const VideoPreview = () => {
   const { 
     videoRef, 
     togglePlay,
+    jumpToStart,
+    jumpToEnd,
     handleClipEnded,
   } = useEditor();
 
@@ -22,6 +24,7 @@ const VideoPreview = () => {
     wasPlaying,
     setWasPlaying,
     updateClip,
+    timelineClips
   } = useEditorStore();
 
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
@@ -38,6 +41,7 @@ const VideoPreview = () => {
       
       // Check if we've reached the end of the current clip
       if (absoluteTime >= clipEndTime) {
+        console.log("Clip ended, triggering handleClipEnded");
         videoRef.current.pause();
         handleClipEnded();
       } else {
@@ -48,11 +52,13 @@ const VideoPreview = () => {
   };
 
   const handleLoadedMetadata = () => {
+    console.log("Video metadata loaded for clip:", selectedClip?.id);
     if (videoRef.current && selectedClip) {
       const videoDuration = videoRef.current.duration;
       
       // Initialize clip properties if not set
       if (!selectedClip.originalDuration) {
+        console.log("Initializing clip duration:", videoDuration);
         updateClip(selectedClip.id, {
           startTime: 0,
           endTime: videoDuration,
@@ -65,12 +71,14 @@ const VideoPreview = () => {
         const clipEndTime = selectedClip.endTime ?? videoDuration;
         const clipDuration = clipEndTime - clipStartTime;
         
+        console.log("Setting up clip playback:", { clipStartTime, clipEndTime, clipDuration });
         videoRef.current.currentTime = clipStartTime;
         setClipDisplayDuration(clipDuration);
         setCurrentTime(0);
         
         // Auto-play if this was triggered by clip switching
         if (wasPlaying) {
+          console.log("Auto-playing next clip");
           setTimeout(() => {
             videoRef.current?.play().catch(e => console.error("Autoplay failed", e));
           }, 100);
@@ -87,27 +95,12 @@ const VideoPreview = () => {
       const clipEndTime = selectedClip.endTime ?? selectedClip.originalDuration;
       const clipDuration = clipEndTime - clipStartTime;
       
+      console.log("Clip changed, setting up:", { clipId: selectedClip.id, clipStartTime, clipDuration });
       videoRef.current.currentTime = clipStartTime;
       setClipDisplayDuration(clipDuration);
       setCurrentTime(0);
     }
   }, [selectedClip?.id, selectedClip?.startTime, selectedClip?.endTime]);
-
-  const jumpToStart = () => {
-    if (videoRef.current && selectedClip) {
-      videoRef.current.currentTime = selectedClip.startTime ?? 0;
-      setCurrentTime(0);
-    }
-  };
-
-  const jumpToEnd = () => {
-    if (videoRef.current && selectedClip) {
-      const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
-      const clipStartTime = selectedClip.startTime ?? 0;
-      videoRef.current.currentTime = clipEndTime;
-      setCurrentTime(clipEndTime - clipStartTime);
-    }
-  };
 
   const toggleFullScreen = () => {
     const elem = previewContainerRef.current;
@@ -132,6 +125,10 @@ const VideoPreview = () => {
   };
 
   const progressPercentage = clipDisplayDuration > 0 ? Math.min(100, (currentTime / clipDisplayDuration) * 100) : 0;
+
+  // Get current clip position for display
+  const currentClipIndex = selectedClip ? timelineClips.findIndex(c => c.id === selectedClip.id) + 1 : 0;
+  const totalClips = timelineClips.length;
 
   return (
     <div ref={previewContainerRef} className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
@@ -170,11 +167,11 @@ const VideoPreview = () => {
       </div>
       <div className="p-2 bg-secondary/20 border-t border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={jumpToStart} title="Jump to start"><Rewind className="h-5 w-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={jumpToStart} title="Jump to clip start"><Rewind className="h-4 w-4" /></Button>
           <Button variant="ghost" size="icon" onClick={togglePlay} title="Play/Pause (Space)">
-            {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
           </Button>
-          <Button variant="ghost" size="icon" onClick={jumpToEnd} title="Jump to end"><FastForward className="h-5 w-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={jumpToEnd} title="Jump to clip end"><FastForward className="h-4 w-4" /></Button>
         </div>
         <div className="flex-1 mx-4">
             <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
@@ -183,7 +180,10 @@ const VideoPreview = () => {
         </div>
         <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground font-mono">{formatTime(currentTime)} / {formatTime(clipDisplayDuration)}</span>
-            <Button variant="ghost" size="icon" onClick={toggleFullScreen} title="Fullscreen"><Expand className="h-5 w-5" /></Button>
+            {totalClips > 0 && (
+              <span className="text-xs text-muted-foreground">({currentClipIndex}/{totalClips})</span>
+            )}
+            <Button variant="ghost" size="icon" onClick={toggleFullScreen} title="Fullscreen"><Expand className="h-4 w-4" /></Button>
         </div>
       </div>
     </div>

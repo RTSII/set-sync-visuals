@@ -103,21 +103,20 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const handleClipEnded = () => {
-    if (!selectedClip) return;
+    if (!selectedClip || timelineClips.length === 0) return;
     
     const currentIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
-    const isLastClip = currentIndex === timelineClips.length - 1;
-
-    if (currentIndex > -1 && !isLastClip) {
-        const nextClip = timelineClips[currentIndex + 1];
-        if (nextClip) {
-          console.log(`Switching from clip ${selectedClip.id} to ${nextClip.id}`);
-          setWasPlaying(isPlaying); // Remember if we were playing
-          setSelectedClip(nextClip);
-        }
+    
+    if (currentIndex >= 0 && currentIndex < timelineClips.length - 1) {
+      // Move to next clip in sequence (left to right)
+      const nextClip = timelineClips[currentIndex + 1];
+      console.log(`Auto-advancing from clip ${currentIndex} to ${currentIndex + 1}`);
+      setWasPlaying(isPlaying); // Remember if we were playing
+      setSelectedClip(nextClip);
     } else {
-        // If it's the last clip, just stop playing
-        setIsPlaying(false);
+      // Last clip or clip not found, stop playing
+      console.log("Reached end of timeline, stopping playback");
+      setIsPlaying(false);
     }
   };
 
