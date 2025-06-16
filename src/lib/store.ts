@@ -6,13 +6,13 @@ interface EditorState {
   setTimelineClips: (clips: MediaClip[] | ((clips: MediaClip[]) => MediaClip[])) => void;
   updateClip: (clipId: string, newProps: Partial<MediaClip>) => void;
   addClipToTimeline: (clip: Omit<MediaClip, 'startTime' | 'endTime' | 'originalDuration' | 'transition'>) => void;
-  
+
   isPlaying: boolean;
   setIsPlaying: (isPlaying: boolean) => void;
 
   currentTime: number;
   setCurrentTime: (time: number) => void;
-  
+
   duration: number;
   setDuration: (duration: number) => void;
 
@@ -21,20 +21,20 @@ interface EditorState {
 
   audioSrc: string | null;
   setAudioSrc: (src: string | null) => void;
-  
+
   audioFile: File | null;
   setAudioFile: (file: File | null) => void;
-  
+
   audioMarkers: number[];
   setAudioMarkers: (updater: number[] | ((markers: number[]) => number[])) => void;
   addAudioMarker: (time: number) => void;
 
   waveform: number[];
   setWaveform: (data: number[]) => void;
-  
+
   wasPlaying: boolean;
   setWasPlaying: (wasPlaying: boolean) => void;
-  
+
   isExporting: boolean;
   setIsExporting: (isExporting: boolean) => void;
 
@@ -43,7 +43,7 @@ interface EditorState {
 
   trimmingClipId: string | null;
   setTrimmingClipId: (id: string | null) => void;
-  
+
   loadAudio: (file: File) => Promise<void>;
 }
 
@@ -51,20 +51,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   timelineClips: [],
   setTimelineClips: (updater) => set(state => ({ timelineClips: typeof updater === 'function' ? updater(state.timelineClips) : updater })),
   updateClip: (clipId, newProps) => set(state => ({
-    timelineClips: state.timelineClips.map(clip => 
+    timelineClips: state.timelineClips.map(clip =>
       clip.id === clipId ? { ...clip, ...newProps } : clip
     ),
     // Update selectedClip if it's the one being updated
     selectedClip: state.selectedClip?.id === clipId ? { ...state.selectedClip, ...newProps } : state.selectedClip
-  })),
-  addClipToTimeline: (clip) => {
+  })), addClipToTimeline: (clip) => {
     if (!get().timelineClips.find(c => c.id === clip.id)) {
       set(state => {
+        // Default to 8 seconds initially, will be updated when video metadata loads
+        const defaultDuration = 8;
         const newClip: MediaClip = {
           ...clip,
           startTime: 0,
-          endTime: 0, // Will be updated on video load
-          originalDuration: 0, // Will be updated on video load
+          endTime: defaultDuration,
+          originalDuration: defaultDuration,
         };
         const newClips = [...state.timelineClips, newClip];
         console.log(`Added clip to timeline: ${clip.id}, total clips: ${newClips.length}`);
@@ -105,16 +106,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   waveform: [],
   setWaveform: (data) => set({ waveform: data }),
-  
+
   wasPlaying: false,
   setWasPlaying: (wasPlaying) => set({ wasPlaying }),
-  
+
   isExporting: false,
   setIsExporting: (isExporting: boolean) => set({ isExporting }),
 
   exportProgress: 0,
   setExportProgress: (progress: number) => set({ exportProgress: progress }),
-  
+
   trimmingClipId: null,
   setTrimmingClipId: (id) => set({ trimmingClipId: id }),
 
@@ -127,27 +128,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const arrayBuffer = await file.arrayBuffer();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      
+
       const channelData = audioBuffer.getChannelData(0);
-      
+
       const canvasWidth = 1200; // Corresponds to canvas width attribute
       const samples = Math.floor(channelData.length / canvasWidth);
       const waveformData: number[] = [];
-      
+
       for (let i = 0; i < canvasWidth; i++) {
-          const start = samples * i;
-          let max = 0;
-          const end = start + samples;
-          for (let j = start; j < end; j++) {
-              const val = Math.abs(channelData[j] ?? 0);
-              if (val > max) {
-                  max = val;
-              }
+        const start = samples * i;
+        let max = 0;
+        const end = start + samples;
+        for (let j = start; j < end; j++) {
+          const val = Math.abs(channelData[j] ?? 0);
+          if (val > max) {
+            max = val;
           }
-          waveformData.push(max);
+        }
+        waveformData.push(max);
       }
       get().setWaveform(waveformData);
-    } catch(e) {
+    } catch (e) {
       console.error("Error processing audio file:", e);
     }
   },

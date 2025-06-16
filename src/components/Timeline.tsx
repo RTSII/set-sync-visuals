@@ -9,11 +9,27 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { Transition } from "@/types";
 import { TimelineControls, AudioTrack, VideoTrack, TimelineRuler } from './timeline';
 
+export function TimelineControls() {
+  //... component code...
+}
+
+export function AudioTrack() {
+  //... component code...
+}
+
+export function VideoTrack() {
+  //... component code...
+}
+
+export function TimelineRuler() {
+  //... component code...
+}
+
 const Timeline = () => {
   const timelineContainerRef = useRef<HTMLDivElement>(null);
   const { audioRef } = useEditor();
-  const { 
-    timelineClips, 
+  const {
+    timelineClips,
     setTimelineClips,
     updateClip,
     addClipToTimeline,
@@ -40,10 +56,10 @@ const Timeline = () => {
   // Calculate playhead position based on current clip and time
   const getPlayheadPosition = () => {
     if (!selectedClip || timelineClips.length === 0) return '0%';
-    
+
     const currentClipIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
     if (currentClipIndex === -1) return '0%';
-    
+
     // Calculate total duration of clips before current clip
     let totalDurationBefore = 0;
     for (let i = 0; i < currentClipIndex; i++) {
@@ -51,18 +67,18 @@ const Timeline = () => {
       const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
       totalDurationBefore += clipDuration;
     }
-    
+
     // Add current time within current clip
     const totalCurrentTime = totalDurationBefore + currentTime;
-    
+
     // Calculate total duration of all clips
     const totalDuration = timelineClips.reduce((acc, clip) => {
       const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
       return acc + clipDuration;
     }, 0);
-    
+
     if (totalDuration === 0) return '0%';
-    
+
     return `${Math.min(100, (totalCurrentTime / totalDuration) * 100)}%`;
   };
 
@@ -77,7 +93,7 @@ const Timeline = () => {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (draggingMarkerIndex === null || !timelineContainerRef.current || duration === 0) return;
-      
+
       const timelineRect = timelineContainerRef.current.getBoundingClientRect();
       const relativeX = e.clientX - timelineRect.left;
       const progress = Math.max(0, Math.min(1, relativeX / timelineRect.width));
@@ -85,7 +101,7 @@ const Timeline = () => {
 
       const newMarkers = [...audioMarkers];
       newMarkers[draggingMarkerIndex] = newTime;
-      setAudioMarkers(newMarkers.sort((a,b) => a - b));
+      setAudioMarkers(newMarkers.sort((a, b) => a - b));
     };
 
     const handleMouseUp = () => {
@@ -107,12 +123,12 @@ const Timeline = () => {
     e.preventDefault();
     const clipData = e.dataTransfer.getData("application/rvj-clip");
     if (clipData) {
-        try {
-            const clip = JSON.parse(clipData);
-            addClipToTimeline(clip);
-        } catch (error) {
-            console.error("Failed to parse clip data on drop", error);
-        }
+      try {
+        const clip = JSON.parse(clipData);
+        addClipToTimeline(clip);
+      } catch (error) {
+        console.error("Failed to parse clip data on drop", error);
+      }
     }
   };
 
@@ -120,14 +136,14 @@ const Timeline = () => {
     if (dragItem.current === null || dragOverItem.current === null || dragItem.current === dragOverItem.current) return;
 
     setTimelineClips(prevClips => {
-        const newClips = [...prevClips];
-        const draggedItemContent = newClips.splice(dragItem.current!, 1)[0];
-        if (draggedItemContent) {
-            newClips.splice(dragOverItem.current!, 0, draggedItemContent);
-        }
-        dragItem.current = null;
-        dragOverItem.current = null;
-        return newClips;
+      const newClips = [...prevClips];
+      const draggedItemContent = newClips.splice(dragItem.current!, 1)[0];
+      if (draggedItemContent) {
+        newClips.splice(dragOverItem.current!, 0, draggedItemContent);
+      }
+      dragItem.current = null;
+      dragOverItem.current = null;
+      return newClips;
     });
   };
 
@@ -151,8 +167,8 @@ const Timeline = () => {
     }
 
     if (timelineClips.some(c => c.transition)) {
-      toast.info("Transitions are coming soon!", { 
-        description: "Your video will be exported without transitions for now." 
+      toast.info("Transitions are coming soon!", {
+        description: "Your video will be exported without transitions for now."
       });
     }
 
@@ -187,13 +203,13 @@ const Timeline = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       toast.success("Export complete!", { description: "Your video has been downloaded." });
 
     } catch (error) {
       console.error("Export failed:", error);
-      toast.error("Export failed.", { 
-        description: "An error occurred during export. This can happen if video clips have different resolutions or formats. Check the console for details." 
+      toast.error("Export failed.", {
+        description: "An error occurred during export. This can happen if video clips have different resolutions or formats. Check the console for details."
       });
     } finally {
       setIsExporting(false);
@@ -208,35 +224,35 @@ const Timeline = () => {
       <TimelineControls handleExport={handleExport} />
       <CardContent className="p-2 pt-1 flex-1 min-h-0 overflow-hidden">
         {isExporting && (
-            <div className="mb-1 space-y-1">
-              <p className="text-xs text-muted-foreground text-center">Processing video, please wait...</p>
-              <Progress value={exportProgress} className="w-full h-1" />
-            </div>
+          <div className="mb-1 space-y-1">
+            <p className="text-xs text-muted-foreground text-center">Processing video, please wait...</p>
+            <Progress value={exportProgress} className="w-full h-1" />
+          </div>
         )}
-        <div 
+        <div
           className="relative min-w-[600px] h-full overflow-x-auto overflow-y-hidden"
           onDrop={handleDropOnTimeline}
           onDragOver={(e) => e.preventDefault()}
           ref={timelineContainerRef}
         >
-            <TimelineRuler />
-            
-            {/* Enhanced playhead */}
-            <div className="absolute top-4 bottom-0 w-0.5 bg-primary z-30 shadow-lg" style={{left: playheadPosition}}>
-                <div className="h-2 w-2 rounded-full bg-primary border-2 border-background absolute -top-1 -translate-x-1/2 shadow-lg"></div>
-                <div className="absolute top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-primary/80 to-primary/60"></div>
-            </div>
+          <TimelineRuler />
 
-            {/* Tracks */}
-            <div className="space-y-1 mt-1">
-                <AudioTrack duration={duration} setDraggingMarkerIndex={setDraggingMarkerIndex} />
-                <VideoTrack
-                  dragItem={dragItem}
-                  dragOverItem={dragOverItem}
-                  handleTimelineDragSort={handleTimelineDragSort}
-                  handleToggleTransition={handleToggleTransition}
-                />
-            </div>
+          {/* Enhanced playhead */}
+          <div className="absolute top-4 bottom-0 w-0.5 bg-primary z-30 shadow-lg" style={{ left: playheadPosition }}>
+            <div className="h-2 w-2 rounded-full bg-primary border-2 border-background absolute -top-1 -translate-x-1/2 shadow-lg"></div>
+            <div className="absolute top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-primary/80 to-primary/60"></div>
+          </div>
+
+          {/* Tracks */}
+          <div className="space-y-1 mt-1">
+            <AudioTrack duration={duration} setDraggingMarkerIndex={setDraggingMarkerIndex} />
+            <VideoTrack
+              dragItem={dragItem}
+              dragOverItem={dragOverItem}
+              handleTimelineDragSort={handleTimelineDragSort}
+              handleToggleTransition={handleToggleTransition}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -1,7 +1,7 @@
-
 import React, { createContext, useContext, ReactNode, useRef, useEffect } from 'react';
 import { useEditorStore } from '@/lib/store';
 import { MediaClip } from '@/types';
+import { safeAddEventListener } from '@/lib/safeEventListeners';
 
 // This type will be shared between components
 export type { MediaClip };
@@ -12,7 +12,7 @@ interface EditorContextType {
   jumpToStart: () => void;
   jumpToEnd: () => void;
   handleClipEnded: () => void;
-  
+
   // Media Element Refs
   videoRef: React.RefObject<HTMLVideoElement>;
   audioRef: React.RefObject<HTMLAudioElement>;
@@ -46,17 +46,17 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
 
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
 
-    video.addEventListener('play', handlePlay);
-    video.addEventListener('pause', handlePause);
+    // Use safe event listeners to prevent null errors
+    const removePlayListener = safeAddEventListener(video, 'play', handlePlay);
+    const removePauseListener = safeAddEventListener(video, 'pause', handlePause);
 
     return () => {
-      video.removeEventListener('play', handlePlay);
-      video.removeEventListener('pause', handlePause);
+      removePlayListener();
+      removePauseListener();
     };
   }, [setIsPlaying]);
 
@@ -75,6 +75,16 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const audio = audioRef.current;
 
     if (video.paused) {
+      // Make sure clip has proper duration before playing
+      if (selectedClip.originalDuration === 0 && video.duration > 0) {
+        const updatedClip = {
+          ...selectedClip,
+          originalDuration: video.duration,
+          endTime: video.duration
+        };
+        setSelectedClip(updatedClip);
+      }
+
       video.play().catch(e => console.error("Video play error:", e));
       audio?.play().catch(e => console.error("Audio play error:", e));
     } else {
@@ -87,10 +97,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     if (!selectedClip || !videoRef.current) return;
     const video = videoRef.current;
     const clipStartTime = selectedClip.startTime ?? 0;
-    
+
     video.currentTime = clipStartTime;
     setCurrentTime(0);
-    
+
     if (audioRef.current) {
       audioRef.current.currentTime = clipStartTime;
     }
@@ -101,10 +111,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const video = videoRef.current;
     const clipEndTime = selectedClip.endTime ?? video.duration;
     const clipStartTime = selectedClip.startTime ?? 0;
-    
+
     video.currentTime = clipEndTime;
     setCurrentTime(clipEndTime - clipStartTime);
-    
+
     if (audioRef.current) {
       audioRef.current.currentTime = clipEndTime;
     }
@@ -116,10 +126,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       console.log("No selected clip or no clips in timeline");
       return;
     }
-    
+
     const currentIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
     console.log(`Current clip index: ${currentIndex}, total clips: ${timelineClips.length}`);
-    
+
     if (currentIndex >= 0 && currentIndex < timelineClips.length - 1) {
       // Move to next clip in sequence (left to right)
       const nextClip = timelineClips[currentIndex + 1];
