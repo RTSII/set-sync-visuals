@@ -19,6 +19,7 @@ const MediaLibrary = () => {
   };
   
   const handleUploadAudioClick = () => {
+    console.log("Upload audio button clicked");
     audioInputRef.current?.click();
   };
 
@@ -37,12 +38,25 @@ const MediaLibrary = () => {
     setMediaClips(prevClips => [...prevClips, ...newClips]);
   };
   
-  const handleAudioFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAudioFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    console.log("Audio file selected:", file?.name, file?.type);
+    
+    if (!file) {
+      console.log("No file selected");
+      return;
+    }
     
     if (file.type.startsWith('audio/')) {
-        loadAudio(file);
+      console.log("Valid audio file, calling loadAudio...");
+      try {
+        await loadAudio(file);
+        console.log("loadAudio completed successfully");
+      } catch (error) {
+        console.error("Error in loadAudio:", error);
+      }
+    } else {
+      console.error("Invalid file type:", file.type);
     }
   };
 

@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { MediaClip, Transition } from '@/types';
 
@@ -81,7 +82,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setCurrentTime: (time) => set({ currentTime: time }),
 
   duration: 0,
-  setDuration: (duration) => set({ duration }),
+  setDuration: (duration) => {
+    console.log("Setting duration to:", duration);
+    set({ duration });
+  },
 
   selectedClip: null,
   setSelectedClip: (clip) => {
@@ -90,10 +94,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   audioSrc: null,
-  setAudioSrc: (src) => set({ audioSrc: src }),
+  setAudioSrc: (src) => {
+    console.log("Setting audio src:", src ? "URL created" : "null");
+    set({ audioSrc: src });
+  },
 
   audioFile: null,
-  setAudioFile: (file) => set({ audioFile: file }),
+  setAudioFile: (file) => {
+    console.log("Setting audio file:", file ? file.name : "null");
+    set({ audioFile: file });
+  },
 
   audioMarkers: [],
   setAudioMarkers: (updater) => set(state => ({ audioMarkers: typeof updater === 'function' ? updater(state.audioMarkers) : updater })),
@@ -105,7 +115,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   waveform: [],
-  setWaveform: (data) => set({ waveform: data }),
+  setWaveform: (data) => {
+    console.log("Setting waveform data, length:", data.length);
+    set({ waveform: data });
+  },
 
   wasPlaying: false,
   setWasPlaying: (wasPlaying) => set({ wasPlaying }),
@@ -120,19 +133,44 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setTrimmingClipId: (id) => set({ trimmingClipId: id }),
 
   loadAudio: async (file: File) => {
-    get().setAudioFile(file); // Store the raw file for export
-    const objectUrl = URL.createObjectURL(file);
-    get().setAudioSrc(objectUrl);
-
+    console.log("loadAudio called with file:", file.name, "size:", file.size, "type:", file.type);
+    
     try {
+      get().setAudioFile(file); // Store the raw file for export
+      const objectUrl = URL.createObjectURL(file);
+      console.log("Created object URL:", objectUrl);
+      get().setAudioSrc(objectUrl);
+
+      // Set duration from audio file
+      const audio = new Audio();
+      audio.src = objectUrl;
+      
+      audio.addEventListener('loadedmetadata', () => {
+        console.log("Audio metadata loaded, duration:", audio.duration);
+        get().setDuration(audio.duration);
+      });
+
+      audio.addEventListener('error', (e) => {
+        console.error("Audio loading error:", e);
+      });
+
+      console.log("Starting audio context processing...");
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      console.log("AudioContext created, state:", audioContext.state);
+      
       const arrayBuffer = await file.arrayBuffer();
+      console.log("ArrayBuffer created, size:", arrayBuffer.byteLength);
+      
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      console.log("AudioBuffer decoded, duration:", audioBuffer.duration, "channels:", audioBuffer.numberOfChannels);
 
       const channelData = audioBuffer.getChannelData(0);
+      console.log("Channel data length:", channelData.length);
 
       const canvasWidth = 1200; // Corresponds to canvas width attribute
       const samples = Math.floor(channelData.length / canvasWidth);
+      console.log("Samples per pixel:", samples);
+      
       const waveformData: number[] = [];
 
       for (let i = 0; i < canvasWidth; i++) {
@@ -147,7 +185,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         }
         waveformData.push(max);
       }
+      
+      console.log("Waveform data generated, length:", waveformData.length, "sample values:", waveformData.slice(0, 10));
       get().setWaveform(waveformData);
+      console.log("Audio processing completed successfully");
     } catch (e) {
       console.error("Error processing audio file:", e);
     }

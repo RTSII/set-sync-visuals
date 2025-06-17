@@ -13,11 +13,17 @@ const AudioTrack: React.FC<AudioTrackProps> = ({ duration, setDraggingMarkerInde
   const { waveform, audioMarkers } = useEditorStore();
 
   useEffect(() => {
+    console.log("AudioTrack render - waveform length:", waveform.length, "duration:", duration);
+    
     if (waveform.length > 0 && canvasRef.current) {
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
-        if (!context) return;
+        if (!context) {
+          console.error("Could not get canvas context");
+          return;
+        }
         
+        console.log("Drawing waveform on canvas...");
         const width = canvas.width;
         const height = canvas.height;
         context.clearRect(0, 0, width, height);
@@ -32,6 +38,10 @@ const AudioTrack: React.FC<AudioTrackProps> = ({ duration, setDraggingMarkerInde
             const y = (height - barHeight) / 2;
             context.fillRect(i * barWidth, y, barWidth * 0.9, barHeight); // 0.9 for bar spacing
         });
+        
+        console.log("Waveform drawn successfully");
+    } else {
+      console.log("Not drawing waveform - waveform length:", waveform.length, "canvas:", !!canvasRef.current);
     }
   }, [waveform]);
 
