@@ -1,19 +1,16 @@
-import React, { createContext, useContext, ReactNode, useRef, useEffect } from 'react';
+
+import React, { createContext, useContext, ReactNode, useRef, useEffect, useCallback } from 'react';
 import { useEditorStore } from '@/lib/store';
 import { MediaClip } from '@/types';
 import { safeAddEventListener } from '@/lib/safeEventListeners';
 
-// This type will be shared between components
 export type { MediaClip };
 
 interface EditorContextType {
-  // Playback actions that need refs
   togglePlay: () => void;
   jumpToStart: () => void;
   jumpToEnd: () => void;
   handleClipEnded: () => void;
-
-  // Media Element Refs
   videoRef: React.RefObject<HTMLVideoElement>;
   audioRef: React.RefObject<HTMLAudioElement>;
 }
@@ -24,7 +21,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Get state and setters from Zustand store
   const {
     timelineClips,
     selectedClip,
@@ -36,21 +32,17 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     currentTime
   } = useEditorStore();
 
-  // Auto-select first clip when clips are added
   useEffect(() => {
     if (timelineClips.length > 0 && !selectedClip) {
-      console.log("Auto-selecting first clip:", timelineClips[0].id);
       setSelectedClip(timelineClips[0]);
     }
   }, [timelineClips, selectedClip, setSelectedClip]);
 
   useEffect(() => {
     const video = videoRef.current;
-
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
 
-    // Use safe event listeners to prevent null errors
     const removePlayListener = safeAddEventListener(video, 'play', handlePlay);
     const removePauseListener = safeAddEventListener(video, 'pause', handlePause);
 
@@ -61,7 +53,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   }, [setIsPlaying]);
 
   useEffect(() => {
-    // Sync audio current time with video current time
     const video = videoRef.current;
     const audio = audioRef.current;
     if (video && audio && isPlaying && Math.abs(video.currentTime - audio.currentTime) > 0.2) {
@@ -69,13 +60,12 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [currentTime, isPlaying]);
 
-  const togglePlay = () => {
+  const togglePlay = useCallback(() => {
     if (!selectedClip || !videoRef.current) return;
     const video = videoRef.current;
     const audio = audioRef.current;
 
     if (video.paused) {
-      // Make sure clip has proper duration before playing
       if (selectedClip.originalDuration === 0 && video.duration > 0) {
         const updatedClip = {
           ...selectedClip,
@@ -91,9 +81,9 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       video.pause();
       audio?.pause();
     }
-  };
+  }, [selectedClip, setSelectedClip]);
 
-  const jumpToStart = () => {
+  const jumpToStart = useCallback(() => {
     if (!selectedClip || !videoRef.current) return;
     const video = videoRef.current;
     const clipStartTime = selectedClip.startTime ?? 0;
@@ -104,9 +94,9 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     if (audioRef.current) {
       audioRef.current.currentTime = clipStartTime;
     }
-  };
+  }, [selectedClip, setCurrentTime]);
 
-  const jumpToEnd = () => {
+  const jumpToEnd = useCallback(() => {
     if (!selectedClip || !videoRef.current) return;
     const video = videoRef.current;
     const clipEndTime = selectedClip.endTime ?? video.duration;
@@ -118,34 +108,25 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     if (audioRef.current) {
       audioRef.current.currentTime = clipEndTime;
     }
-  };
+  }, [selectedClip, setCurrentTime]);
 
-  const handleClipEnded = () => {
-    console.log("Clip ended, checking for next clip");
-    if (!selectedClip || timelineClips.length === 0) {
-      console.log("No selected clip or no clips in timeline");
-      return;
-    }
+  const handleClipEnded = useCallback(() => {
+    if (!selectedClip || timelineClips.length === 0) return;
 
     const currentIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
-    console.log(`Current clip index: ${currentIndex}, total clips: ${timelineClips.length}`);
 
     if (currentIndex >= 0 && currentIndex < timelineClips.length - 1) {
-      // Move to next clip in sequence (left to right)
       const nextClip = timelineClips[currentIndex + 1];
-      console.log(`Auto-advancing from clip ${currentIndex} to ${currentIndex + 1}`);
-      setWasPlaying(isPlaying); // Remember if we were playing
+      setWasPlaying(isPlaying);
       setSelectedClip(nextClip);
     } else {
-      // Last clip or clip not found, stop playing
-      console.log("Reached end of timeline, stopping playback");
       const video = videoRef.current;
       const audio = audioRef.current;
       if (video) video.pause();
       if (audio) audio.pause();
       setIsPlaying(false);
     }
-  };
+  }, [selectedClip, timelineClips, isPlaying, setWasPlaying, setSelectedClip, setIsPlaying]);
 
   const value = {
     togglePlay,

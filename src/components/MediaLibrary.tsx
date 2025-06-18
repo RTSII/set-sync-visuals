@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardSwap } from "@/components/ui/card-swap";
 import { UploadCloud, Plus, Music, Video } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
 import { useEditorStore } from "@/lib/store";
@@ -8,18 +9,67 @@ import { MediaClip } from "@/types";
 
 const MediaLibrary = () => {
   const [mediaClips, setMediaClips] = useState<MediaClip[]>([]);
+  const [thumbnailCache, setThumbnailCache] = useState<Record<string, string>>({});
   const videoInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
-  const { addClipToTimeline, loadAudio } = useEditorStore();
+  const { addClipToTimeline, loadAudio, setSelectedClip } = useEditorStore();
+
+  const generateThumbnail = (clip: MediaClip): Promise<string> => {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.crossOrigin = "anonymous";
+      video.src = clip.src;
+      video.muted = true;
+      video.preload = "metadata";
+
+      const timeout = setTimeout(() => {
+        resolve("data:,"); // Empty placeholder
+      }, 5000);
+
+      video.onloadedmetadata = () => {
+        video.currentTime = Math.min(0.5, video.duration / 3);
+      };
+
+      video.onseeked = () => {
+        clearTimeout(timeout);
+        const canvas = document.createElement('canvas');
+        canvas.width = 160;
+        canvas.height = 90;
+        const ctx = canvas.getContext('2d');
+
+        if (ctx && video.videoWidth > 0) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const thumbnailUrl = canvas.toDataURL('image/jpeg', 0.85);
+          resolve(thumbnailUrl);
+        } else {
+          resolve("data:,");
+        }
+        video.remove();
+      };
+
+      video.onerror = () => {
+        clearTimeout(timeout);
+        resolve("data:,");
+      };
+    });
+  };
+
+  useEffect(() => {
+    mediaClips.forEach(async (clip) => {
+      if (!thumbnailCache[clip.id]) {
+        const thumbnail = await generateThumbnail(clip);
+        setThumbnailCache(prev => ({ ...prev, [clip.id]: thumbnail }));
+      }
+    });
+  }, [mediaClips, thumbnailCache]);
 
   const handleUploadVideoClick = () => {
     videoInputRef.current?.click();
   };
   
   const handleUploadAudioClick = () => {
-    console.log("Upload audio button clicked");
     audioInputRef.current?.click();
   };
 
@@ -40,32 +90,22 @@ const MediaLibrary = () => {
   
   const handleAudioFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    console.log("Audio file selected:", file?.name, file?.type);
     
-    if (!file) {
-      console.log("No file selected");
-      return;
-    }
+    if (!file) return;
     
     if (file.type.startsWith('audio/')) {
-      console.log("Valid audio file, calling loadAudio...");
       try {
         await loadAudio(file);
-        console.log("loadAudio completed successfully");
       } catch (error) {
         console.error("Error in loadAudio:", error);
       }
-    } else {
-      console.error("Invalid file type:", file.type);
     }
   };
 
-  // Clean up object URLs on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
       mediaClips.forEach(clip => URL.revokeObjectURL(clip.src));
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDragSort = () => {
@@ -85,9 +125,18 @@ const MediaLibrary = () => {
 
   const handleClipDragStart = (e: React.DragEvent<HTMLDivElement>, clip: MediaClip, index: number) => {
     dragItem.current = index;
-    // Set data for dropping into the timeline
     e.dataTransfer.setData("application/rvj-clip", JSON.stringify(clip));
   };
+
+  const cardSwapData = mediaClips.map(clip => ({
+    id: clip.id,
+    thumbnail: thumbnailCache[clip.id] || "data:,",
+    title: clip.file.name,
+    onClick: () => {
+      addClipToTimeline(clip);
+      setSelectedClip(clip);
+    }
+  }));
 
   return (
     <Card className="h-full flex flex-col overflow-hidden">
@@ -97,31 +146,8 @@ const MediaLibrary = () => {
       <CardContent className="flex-1 flex flex-col gap-2 overflow-hidden p-3 pt-0">
         <div className="flex-1 flex flex-col overflow-hidden">
           {mediaClips.length > 0 ? (
-            <div className="grid grid-cols-2 gap-1 overflow-y-auto max-h-full">
-              {mediaClips.map((clip, index) => (
-                <div 
-                  key={clip.id} 
-                  className="aspect-video rounded-sm overflow-hidden cursor-grab ring-offset-background ring-primary focus-visible:ring-1 focus-visible:ring-offset-1 relative group active:cursor-grabbing bg-muted/50"
-                  draggable
-                  onDragStart={(e) => handleClipDragStart(e, clip, index)}
-                  onDragEnter={() => (dragOverItem.current = index)}
-                  onDragEnd={handleDragSort}
-                  onDragOver={(e) => e.preventDefault()}
-                >
-                  {/* Static video icon instead of preview */}
-                  <div className="w-full h-full flex items-center justify-center bg-muted/30">
-                    <Video className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 truncate">
-                    {clip.file.name}
-                  </div>
-                  <div className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 rounded-full">
-                    <Button size="icon" variant="ghost" className="h-5 w-5 text-white hover:bg-white/20 hover:text-white" onClick={() => addClipToTimeline(clip)}>
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            <div className="h-full">
+              <CardSwap cards={cardSwapData} className="h-full" />
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground border border-dashed border-border rounded-lg p-2">
