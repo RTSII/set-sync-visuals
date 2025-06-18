@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Pause, Rewind, FastForward, Expand } from "lucide-react";
+import { Pause, Play, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
 import { useEditorStore } from "@/lib/store";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -14,6 +14,7 @@ const VideoPreview = () => {
     jumpToStart,
     jumpToEnd,
     handleClipEnded,
+    seekToTime,
   } = useEditor();
 
   const {
@@ -82,6 +83,17 @@ const VideoPreview = () => {
 
   const handleVideoEnded = () => {
     handleClipEnded();
+  };
+
+  const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!selectedClip || clipDisplayDuration === 0) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const progress = clickX / rect.width;
+    const newTime = progress * clipDisplayDuration;
+    
+    seekToTime(newTime);
   };
 
   React.useEffect(() => {
@@ -153,18 +165,21 @@ const VideoPreview = () => {
       </div>
       <div className="p-2 bg-secondary/20 border-t border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={jumpToStart} title="Jump to clip start">
+          <Button variant="ghost" size="icon" onClick={jumpToStart} title="Jump to project start">
             <Rewind className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={togglePlay} title="Play/Pause (Space)">
-            <Pause className="h-4 w-4" />
+            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
           </Button>
           <Button variant="ghost" size="icon" onClick={jumpToEnd} title="Jump to clip end">
             <FastForward className="h-4 w-4" />
           </Button>
         </div>
         <div className="flex-1 mx-4">
-          <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
+          <div 
+            className="w-full bg-muted h-1.5 rounded-full overflow-hidden cursor-pointer"
+            onClick={handleProgressBarClick}
+          >
             <div className="bg-primary h-full transition-all duration-100" style={{ width: `${progressPercentage}%` }}></div>
           </div>
         </div>

@@ -11,6 +11,7 @@ interface EditorContextType {
   jumpToStart: () => void;
   jumpToEnd: () => void;
   handleClipEnded: () => void;
+  seekToTime: (time: number) => void;
   videoRef: React.RefObject<HTMLVideoElement>;
   audioRef: React.RefObject<HTMLAudioElement>;
 }
@@ -55,7 +56,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const video = videoRef.current;
     const audio = audioRef.current;
-    if (video && audio && isPlaying && Math.abs(video.currentTime - audio.currentTime) > 0.2) {
+    if (video && audio && isPlaying && Math.abs(video.currentTime - audio.currentTime) > 0.1) {
       audio.currentTime = video.currentTime;
     }
   }, [currentTime, isPlaying]);
@@ -84,17 +85,21 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   }, [selectedClip, setSelectedClip]);
 
   const jumpToStart = useCallback(() => {
-    if (!selectedClip || !videoRef.current) return;
+    if (!videoRef.current) return;
     const video = videoRef.current;
-    const clipStartTime = selectedClip.startTime ?? 0;
-
-    video.currentTime = clipStartTime;
-    setCurrentTime(0);
-
-    if (audioRef.current) {
-      audioRef.current.currentTime = clipStartTime;
+    
+    // Jump to beginning of entire project (first clip)
+    if (timelineClips.length > 0) {
+      const firstClip = timelineClips[0];
+      setSelectedClip(firstClip);
+      video.currentTime = firstClip.startTime ?? 0;
+      setCurrentTime(0);
+      
+      if (audioRef.current) {
+        audioRef.current.currentTime = firstClip.startTime ?? 0;
+      }
     }
-  }, [selectedClip, setCurrentTime]);
+  }, [timelineClips, setSelectedClip, setCurrentTime]);
 
   const jumpToEnd = useCallback(() => {
     if (!selectedClip || !videoRef.current) return;
@@ -107,6 +112,21 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
     if (audioRef.current) {
       audioRef.current.currentTime = clipEndTime;
+    }
+  }, [selectedClip, setCurrentTime]);
+
+  const seekToTime = useCallback((time: number) => {
+    if (!videoRef.current || !selectedClip) return;
+    
+    const video = videoRef.current;
+    const clipStartTime = selectedClip.startTime ?? 0;
+    const absoluteTime = clipStartTime + time;
+    
+    video.currentTime = absoluteTime;
+    setCurrentTime(time);
+    
+    if (audioRef.current) {
+      audioRef.current.currentTime = absoluteTime;
     }
   }, [selectedClip, setCurrentTime]);
 
@@ -133,6 +153,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     jumpToStart,
     jumpToEnd,
     handleClipEnded,
+    seekToTime,
     videoRef,
     audioRef,
   };

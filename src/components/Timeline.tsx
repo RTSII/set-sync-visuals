@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import React, { useRef, useEffect, useState } from "react";
@@ -17,7 +16,7 @@ import {
 
 const Timeline = () => {
   const timelineContainerRef = useRef<HTMLDivElement>(null);
-  const { audioRef } = useEditor();
+  const { audioRef, seekToTime } = useEditor();
   const {
     timelineClips,
     setTimelineClips,
@@ -70,6 +69,38 @@ const Timeline = () => {
     if (totalDuration === 0) return '0%';
 
     return `${Math.min(100, (totalCurrentTime / totalDuration) * 100)}%`;
+  };
+
+  const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!timelineContainerRef.current || !selectedClip) return;
+    
+    const rect = timelineContainerRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const progress = clickX / rect.width;
+    
+    // Calculate total duration of all clips
+    const totalDuration = timelineClips.reduce((acc, clip) => {
+      const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
+      return acc + clipDuration;
+    }, 0);
+    
+    if (totalDuration === 0) return;
+    
+    const targetTime = progress * totalDuration;
+    
+    // Find which clip this time falls into
+    let accumulatedTime = 0;
+    for (const clip of timelineClips) {
+      const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
+      
+      if (targetTime <= accumulatedTime + clipDuration) {
+        const timeInClip = targetTime - accumulatedTime;
+        seekToTime(timeInClip);
+        break;
+      }
+      
+      accumulatedTime += clipDuration;
+    }
   };
 
   useEffect(() => {
@@ -220,9 +251,10 @@ const Timeline = () => {
           </div>
         )}
         <div
-          className="relative min-w-[600px] h-full overflow-x-auto overflow-y-hidden"
+          className="relative min-w-[600px] h-full overflow-x-auto overflow-y-hidden cursor-pointer"
           onDrop={handleDropOnTimeline}
           onDragOver={(e) => e.preventDefault()}
+          onClick={handleTimelineClick}
           ref={timelineContainerRef}
         >
           <TimelineRuler />
