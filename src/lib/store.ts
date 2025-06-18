@@ -133,43 +133,47 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setTrimmingClipId: (id) => set({ trimmingClipId: id }),
 
   loadAudio: async (file: File) => {
-    console.log("loadAudio called with file:", file.name, "size:", file.size, "type:", file.type);
+    console.log("🎵 AUDIO UPLOAD: loadAudio called with file:", file.name, "size:", file.size, "type:", file.type);
     
     try {
+      console.log("🎵 AUDIO UPLOAD: Step 1 - Setting audio file in store");
       get().setAudioFile(file); // Store the raw file for export
+      
+      console.log("🎵 AUDIO UPLOAD: Step 2 - Creating object URL");
       const objectUrl = URL.createObjectURL(file);
-      console.log("Created object URL:", objectUrl);
+      console.log("🎵 AUDIO UPLOAD: Created object URL:", objectUrl);
       get().setAudioSrc(objectUrl);
 
+      console.log("🎵 AUDIO UPLOAD: Step 3 - Loading audio metadata");
       // Set duration from audio file
       const audio = new Audio();
       audio.src = objectUrl;
       
       audio.addEventListener('loadedmetadata', () => {
-        console.log("Audio metadata loaded, duration:", audio.duration);
+        console.log("🎵 AUDIO UPLOAD: Audio metadata loaded, duration:", audio.duration);
         get().setDuration(audio.duration);
       });
 
       audio.addEventListener('error', (e) => {
-        console.error("Audio loading error:", e);
+        console.error("🎵 AUDIO UPLOAD: Audio loading error:", e);
       });
 
-      console.log("Starting audio context processing...");
+      console.log("🎵 AUDIO UPLOAD: Step 4 - Starting audio context processing...");
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      console.log("AudioContext created, state:", audioContext.state);
+      console.log("🎵 AUDIO UPLOAD: AudioContext created, state:", audioContext.state);
       
       const arrayBuffer = await file.arrayBuffer();
-      console.log("ArrayBuffer created, size:", arrayBuffer.byteLength);
+      console.log("🎵 AUDIO UPLOAD: ArrayBuffer created, size:", arrayBuffer.byteLength);
       
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      console.log("AudioBuffer decoded, duration:", audioBuffer.duration, "channels:", audioBuffer.numberOfChannels);
+      console.log("🎵 AUDIO UPLOAD: AudioBuffer decoded, duration:", audioBuffer.duration, "channels:", audioBuffer.numberOfChannels);
 
       const channelData = audioBuffer.getChannelData(0);
-      console.log("Channel data length:", channelData.length);
+      console.log("🎵 AUDIO UPLOAD: Channel data length:", channelData.length);
 
       const canvasWidth = 1200; // Corresponds to canvas width attribute
       const samples = Math.floor(channelData.length / canvasWidth);
-      console.log("Samples per pixel:", samples);
+      console.log("🎵 AUDIO UPLOAD: Samples per pixel:", samples);
       
       const waveformData: number[] = [];
 
@@ -186,11 +190,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         waveformData.push(max);
       }
       
-      console.log("Waveform data generated, length:", waveformData.length, "sample values:", waveformData.slice(0, 10));
+      console.log("🎵 AUDIO UPLOAD: Waveform data generated, length:", waveformData.length, "sample values:", waveformData.slice(0, 10));
       get().setWaveform(waveformData);
-      console.log("Audio processing completed successfully");
+      console.log("🎵 AUDIO UPLOAD: ✅ Audio processing completed successfully");
     } catch (e) {
-      console.error("Error processing audio file:", e);
+      console.error("🎵 AUDIO UPLOAD: ❌ Error processing audio file:", e);
     }
   },
 }));

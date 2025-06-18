@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import React, { useRef, useEffect, useState } from "react";
@@ -7,23 +8,12 @@ import { toast } from "sonner";
 import { exportVideo } from "@/lib/export";
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { Transition } from "@/types";
-import { TimelineControls, AudioTrack, VideoTrack, TimelineRuler } from './timeline';
-
-export function TimelineControls() {
-  //... component code...
-}
-
-export function AudioTrack() {
-  //... component code...
-}
-
-export function VideoTrack() {
-  //... component code...
-}
-
-export function TimelineRuler() {
-  //... component code...
-}
+import { 
+  TimelineControls, 
+  AudioTrack, 
+  VideoTrack, 
+  TimelineRuler 
+} from './timeline';
 
 const Timeline = () => {
   const timelineContainerRef = useRef<HTMLDivElement>(null);
