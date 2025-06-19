@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { MediaClip, Transition } from '@/types';
 
@@ -48,8 +47,11 @@ interface EditorState {
   absoluteTimelinePosition: number;
   setAbsoluteTimelinePosition: (position: number) => void;
 
-  resetToTimelineStart: () => void;
+  // NEW: Track if audio is the master timeline
+  isAudioMaster: boolean;
+  setIsAudioMaster: (isAudioMaster: boolean) => void;
 
+  resetToTimelineStart: () => void;
   loadAudio: (file: File) => Promise<void>;
 }
 
@@ -151,6 +153,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ absoluteTimelinePosition: position });
   },
 
+  // NEW: Audio master state
+  isAudioMaster: false,
+  setIsAudioMaster: (isAudioMaster) => {
+    console.log("Setting audio master mode:", isAudioMaster);
+    set({ isAudioMaster });
+  },
+
   resetToTimelineStart: () => {
     const state = get();
     console.log("🔄 RESET: Resetting to timeline start");
@@ -186,6 +195,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const objectUrl = URL.createObjectURL(file);
       console.log("🎵 AUDIO UPLOAD: Created object URL:", objectUrl);
       get().setAudioSrc(objectUrl);
+      
+      // Enable audio master mode when audio is loaded
+      get().setIsAudioMaster(true);
 
       console.log("🎵 AUDIO UPLOAD: Step 3 - Loading audio metadata");
       const audio = new Audio();

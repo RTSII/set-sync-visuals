@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useEditorStore } from '@/lib/store';
 
@@ -13,41 +12,71 @@ export const usePlaybackControls = (
     isPlaying,
     setIsPlaying,
     setCurrentTime,
-    resetToTimelineStart
+    resetToTimelineStart,
+    isAudioMaster
   } = useEditorStore();
 
   const togglePlay = useCallback(() => {
-    if (!selectedClip || !videoRef.current || !audioRef.current) {
-      console.log("🎮 PLAY: No clip selected, video ref, or audio ref not available");
+    if (!selectedClip || !videoRef.current) {
+      console.log("🎮 PLAY: No clip selected or video ref not available");
       return;
     }
     
     const video = videoRef.current;
     const audio = audioRef.current;
 
-    console.log("🎮 PLAY: Toggle play called, audio paused:", audio.paused);
+    console.log("🎮 PLAY: Toggle play called, isAudioMaster:", isAudioMaster);
 
-    if (audio.paused) {
-      // Update clip metadata if needed
-      if (selectedClip.originalDuration === 0 && video.duration > 0) {
-        console.log("🎮 PLAY: Updating clip metadata with video duration:", video.duration);
-        const updatedClip = {
-          ...selectedClip,
-          originalDuration: video.duration,
-          endTime: video.duration
-        };
-        setSelectedClip(updatedClip);
+    if (isAudioMaster && audio) {
+      // Audio-driven mode (existing logic)
+      console.log("🎮 PLAY: Audio-driven mode, audio paused:", audio.paused);
+
+      if (audio.paused) {
+        // Update clip metadata if needed
+        if (selectedClip.originalDuration === 0 && video.duration > 0) {
+          console.log("🎮 PLAY: Updating clip metadata with video duration:", video.duration);
+          const updatedClip = {
+            ...selectedClip,
+            originalDuration: video.duration,
+            endTime: video.duration
+          };
+          setSelectedClip(updatedClip);
+        }
+
+        // Start playback - AUDIO IS THE MASTER
+        audio.play().catch(e => console.error("🎮 PLAY: Audio play error:", e));
+        video.play().catch(e => console.error("🎮 PLAY: Video play error:", e));
+      } else {
+        // Pause playback - AUDIO IS THE MASTER
+        audio.pause();
+        video.pause();
       }
-
-      // Start playback - AUDIO IS THE MASTER
-      audio.play().catch(e => console.error("🎮 PLAY: Audio play error:", e));
-      video.play().catch(e => console.error("🎮 PLAY: Video play error:", e));
     } else {
-      // Pause playback - AUDIO IS THE MASTER
-      audio.pause();
-      video.pause();
+      // Video-only mode
+      console.log("🎮 PLAY: Video-only mode, video paused:", video.paused);
+
+      if (video.paused) {
+        // Update clip metadata if needed
+        if (selectedClip.originalDuration === 0 && video.duration > 0) {
+          console.log("🎮 PLAY: Updating clip metadata with video duration:", video.duration);
+          const updatedClip = {
+            ...selectedClip,
+            originalDuration: video.duration,
+            endTime: video.duration
+          };
+          setSelectedClip(updatedClip);
+        }
+
+        // Start video playback
+        video.play().catch(e => console.error("🎮 PLAY: Video play error:", e));
+        setIsPlaying(true);
+      } else {
+        // Pause video playback
+        video.pause();
+        setIsPlaying(false);
+      }
     }
-  }, [selectedClip, setSelectedClip]);
+  }, [selectedClip, setSelectedClip, isAudioMaster, setIsPlaying]);
 
   const jumpToStart = useCallback(() => {
     console.log("🎯 JUMP: Jumping to timeline start");
@@ -67,7 +96,7 @@ export const usePlaybackControls = (
   }, [timelineClips, resetToTimelineStart]);
 
   const jumpToEnd = useCallback(() => {
-    if (!audioRef.current || timelineClips.length === 0) return;
+    if (timelineClips.length === 0) return;
     
     // Calculate total timeline duration
     const totalDuration = timelineClips.reduce((acc, clip) => {
@@ -77,8 +106,10 @@ export const usePlaybackControls = (
 
     console.log("🎯 JUMP: Jumping to timeline end, total duration:", totalDuration);
 
-    // Set audio to end (master timeline)
-    audioRef.current.currentTime = Math.min(totalDuration, audioRef.current.duration);
+    // Set audio to end if available (master timeline)
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.min(totalDuration, audioRef.current.duration);
+    }
     
     // Find and set the last clip
     if (timelineClips.length > 0) {

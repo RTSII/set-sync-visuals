@@ -11,12 +11,14 @@ export const useAudioTimeSync = (
     selectedClip,
     setSelectedClip,
     setCurrentTime,
-    setAbsoluteTimelinePosition
+    setAbsoluteTimelinePosition,
+    isAudioMaster
   } = useEditorStore();
 
   // Sync video clips to audio timeline position
   const syncToAudioTime = useCallback(() => {
-    if (!audioRef.current || timelineClips.length === 0) return;
+    // Only run in audio master mode
+    if (!isAudioMaster || !audioRef.current || timelineClips.length === 0) return;
 
     const audioCurrentTime = audioRef.current.currentTime;
     
@@ -94,10 +96,12 @@ export const useAudioTimeSync = (
       setCurrentTime(timeInClip);
       setAbsoluteTimelinePosition(audioCurrentTime);
     }
-  }, [timelineClips, selectedClip, setSelectedClip, setCurrentTime, setAbsoluteTimelinePosition]);
+  }, [timelineClips, selectedClip, setSelectedClip, setCurrentTime, setAbsoluteTimelinePosition, isAudioMaster]);
 
-  // Listen to audio timeupdate events to drive the timeline
+  // Listen to audio timeupdate events to drive the timeline (only in audio master mode)
   useEffect(() => {
+    if (!isAudioMaster) return;
+    
     const audio = audioRef.current;
     if (!audio) return;
 
@@ -110,7 +114,7 @@ export const useAudioTimeSync = (
     return () => {
       audio.removeEventListener('timeupdate', handleAudioTimeUpdate);
     };
-  }, [syncToAudioTime]);
+  }, [syncToAudioTime, isAudioMaster]);
 
   return {
     syncToAudioTime
