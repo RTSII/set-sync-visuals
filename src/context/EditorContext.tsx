@@ -249,9 +249,12 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       setSelectedClip(nextClip);
       setCurrentTime(0);
       
-      // Update video element
+      // Update video element and handle playback continuation
       if (videoRef.current) {
         const nextClipStartTime = nextClip.startTime ?? 0;
+        console.log("🔄 CLIP-END: Setting video time to:", nextClipStartTime);
+        
+        // Set video source and time
         videoRef.current.currentTime = nextClipStartTime;
         
         if (audioRef.current) {
@@ -261,15 +264,39 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         // Continue playing if we were playing before
         if (wasPlayingBefore) {
           console.log("🔄 CLIP-END: Continuing playback on next clip");
-          // Use a small delay to ensure video has loaded
-          setTimeout(() => {
-            if (videoRef.current && videoRef.current.paused) {
-              videoRef.current.play().catch(e => console.error("🔄 CLIP-END: Auto-play failed:", e));
+          
+          // Wait for the video to be ready before playing
+          const continuePlayback = () => {
+            if (videoRef.current && videoRef.current.readyState >= 2) {
+              console.log("🔄 CLIP-END: Video ready, starting playback");
+              videoRef.current.play().then(() => {
+                console.log("🔄 CLIP-END: Video playback started successfully");
+              }).catch(e => {
+                console.error("🔄 CLIP-END: Video play failed:", e);
+                // Try again after a short delay
+                setTimeout(() => {
+                  if (videoRef.current) {
+                    videoRef.current.play().catch(err => 
+                      console.error("🔄 CLIP-END: Second video play attempt failed:", err)
+                    );
+                  }
+                }, 100);
+              });
+              
+              if (audioRef.current) {
+                audioRef.current.play().catch(e => 
+                  console.error("🔄 CLIP-END: Audio play failed:", e)
+                );
+              }
+            } else {
+              console.log("🔄 CLIP-END: Video not ready, waiting...");
+              // If video isn't ready, wait a bit longer
+              setTimeout(continuePlayback, 150);
             }
-            if (audioRef.current && audioRef.current.paused) {
-              audioRef.current.play().catch(e => console.error("🔄 CLIP-END: Audio auto-play failed:", e));
-            }
-          }, 50);
+          };
+          
+          // Start the playback continuation process
+          setTimeout(continuePlayback, 50);
         }
       }
     } else {
