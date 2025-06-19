@@ -37,7 +37,7 @@ export const useClipTransition = (
         newAbsolutePosition += clipDuration;
       }
       
-      // Store if we were playing
+      // Store if we were playing before transition
       const wasPlayingBefore = isPlaying;
       
       // Update state immediately
@@ -45,7 +45,7 @@ export const useClipTransition = (
       setSelectedClip(nextClip);
       setCurrentTime(0);
       
-      // Update video element and handle playback continuation
+      // Update video element and continue playback seamlessly
       if (videoRef.current) {
         const nextClipStartTime = nextClip.startTime ?? 0;
         console.log("🔄 CLIP-END: Setting video time to:", nextClipStartTime);
@@ -57,16 +57,19 @@ export const useClipTransition = (
           audioRef.current.currentTime = nextClipStartTime;
         }
         
-        // Continue playing if we were playing before
+        // Continue playing immediately if we were playing before
         if (wasPlayingBefore) {
-          console.log("🔄 CLIP-END: Continuing playback on next clip");
+          console.log("🔄 CLIP-END: Continuing seamless playback on next clip");
           
-          // Simple timeout approach for playback continuation
-          setTimeout(() => {
-            if (videoRef.current) {
-              videoRef.current.play().catch(e => 
-                console.error("🔄 CLIP-END: Video play failed:", e)
-              );
+          // Use requestAnimationFrame for smoother transition
+          requestAnimationFrame(() => {
+            if (videoRef.current && wasPlayingBefore) {
+              videoRef.current.play().then(() => {
+                console.log("🔄 CLIP-END: Video playback continued successfully");
+              }).catch(e => {
+                console.error("🔄 CLIP-END: Video play failed:", e);
+                // Don't set isPlaying to false here - let the video sync handle it
+              });
               
               if (audioRef.current) {
                 audioRef.current.play().catch(e => 
@@ -74,7 +77,7 @@ export const useClipTransition = (
                 );
               }
             }
-          }, 100);
+          });
         }
       }
     } else {

@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
@@ -30,22 +29,26 @@ const VideoPreview = () => {
 
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
   const previewContainerRef = React.useRef<HTMLDivElement>(null);
+  const isTransitioning = React.useRef(false);
 
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
 
   const handleTimeUpdate = () => {
-    if (videoRef.current && selectedClip) {
+    if (videoRef.current && selectedClip && !isTransitioning.current) {
       const videoCurrentTime = videoRef.current.currentTime;
       const clipStartTime = selectedClip.startTime ?? 0;
       const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
 
-      console.log("🎬 TIME-UPDATE: Video time:", videoCurrentTime, "Clip end:", clipEndTime);
-
       // Check if we've reached the end of the current clip
-      if (clipEndTime && videoCurrentTime >= clipEndTime - 0.1) {
+      if (clipEndTime && videoCurrentTime >= clipEndTime - 0.05) {
         console.log("🎬 TIME-UPDATE: Clip reached end, triggering transition");
+        isTransitioning.current = true;
         handleClipEnded();
+        // Reset transition flag after a short delay
+        setTimeout(() => {
+          isTransitioning.current = false;
+        }, 100);
       } else {
         // Update relative time within the clip
         const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
@@ -94,7 +97,9 @@ const VideoPreview = () => {
 
   const handleVideoEnded = () => {
     console.log("🎬 VIDEO-END: Video element ended event");
-    handleClipEnded();
+    if (!isTransitioning.current) {
+      handleClipEnded();
+    }
   };
 
   const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -174,9 +179,7 @@ const VideoPreview = () => {
               alt="RVJ Logo"
               className="w-1/3 h-1/3 object-contain opacity-50"
             />
-            <div className="text-center text-muted-fore
-
-">
+            <div className="text-center text-muted-foreground">
               <p className="text-lg font-medium">Select a clip to preview</p>
               <p className="text-sm">Use Space to play/pause, J/L for -10s/+10s, ←/→ for -5s/+5s</p>
             </div>
