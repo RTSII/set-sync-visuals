@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
@@ -57,10 +58,9 @@ const VideoPreview = () => {
         // Reset transition flag after transition should be complete
         transitionTimeoutRef.current = setTimeout(() => {
           isTransitioning.current = false;
-        }, 100); // Increased timeout for smoother transitions
+        }, 100);
       } else {
         // Update relative time within the clip - but don't update absolute position
-        // The audio timeupdate in useAudioTimeSync drives the absolute position
         const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
         setCurrentTime(relativeTime);
       }
@@ -174,18 +174,33 @@ const VideoPreview = () => {
     <div ref={previewContainerRef} className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
       <div className="bg-black flex items-center justify-center relative group overflow-hidden">
         {selectedClip ? (
-          <video
-            ref={videoRef}
-            src={selectedClip.src}
-            className="w-full h-full object-contain"
-            onTimeUpdate={handleTimeUpdate}
-            onLoadedMetadata={handleLoadedMetadata}
-            onEnded={handleVideoEnded}
-            onClick={togglePlay}
-            preload="metadata"
-            playsInline
-            muted={false}
-          />
+          <>
+            <video
+              ref={videoRef}
+              src={selectedClip.src}
+              className="w-full h-full object-contain"
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onEnded={handleVideoEnded}
+              onClick={togglePlay}
+              preload="metadata"
+              playsInline
+              muted={false}
+            />
+            {/* Play button overlay - only show when not playing */}
+            {!isPlaying && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="w-16 h-16 rounded-full bg-black/50 hover:bg-black/70 text-white pointer-events-auto"
+                  onClick={togglePlay}
+                >
+                  <Play className="h-8 w-8 ml-1" />
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center flex-col gap-4">
             <img

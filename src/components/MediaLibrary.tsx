@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { UploadCloud, Plus, Music, Video } from "lucide-react";
@@ -155,7 +154,7 @@ const MediaLibrary = () => {
                   {thumbnailCache[clip.id] && thumbnailCache[clip.id] !== "data:," ? (
                     <img
                       src={thumbnailCache[clip.id]}
-                      alt={clip.file.name}
+                      alt="Video thumbnail"
                       className="w-full h-full object-cover rounded"
                     />
                   ) : (
@@ -165,11 +164,6 @@ const MediaLibrary = () => {
                   )}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded flex items-center justify-center">
                     <Plus className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                  <div className="absolute bottom-1 left-1 right-1">
-                    <p className="text-xs text-white bg-black/70 px-1 rounded truncate">
-                      {clip.file.name}
-                    </p>
                   </div>
                 </div>
               ))}
