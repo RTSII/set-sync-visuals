@@ -38,18 +38,25 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     resetToTimelineStart
   } = useEditorStore();
 
-  // Auto-select first clip when clips are added and reset to beginning
+  // Auto-select first clip when clips are added
   useEffect(() => {
     if (timelineClips.length > 0 && !selectedClip) {
-      console.log("Auto-selecting first clip and resetting to beginning");
+      console.log("🎯 AUTO-SELECT: Timeline has clips but no selection, triggering reset");
       resetToTimelineStart();
     }
-  }, [timelineClips, selectedClip, resetToTimelineStart]);
+  }, [timelineClips.length, selectedClip, resetToTimelineStart]);
 
+  // Sync video/audio play/pause state
   useEffect(() => {
     const video = videoRef.current;
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
+    const handlePlay = () => {
+      console.log("🎮 VIDEO: Play event triggered");
+      setIsPlaying(true);
+    };
+    const handlePause = () => {
+      console.log("🎮 VIDEO: Pause event triggered");
+      setIsPlaying(false);
+    };
 
     const removePlayListener = safeAddEventListener(video, 'play', handlePlay);
     const removePauseListener = safeAddEventListener(video, 'pause', handlePause);
@@ -60,7 +67,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [setIsPlaying]);
 
-  // Calculate absolute time position in the timeline
   const getAbsoluteTimePosition = useCallback(() => {
     return absoluteTimelinePosition;
   }, [absoluteTimelinePosition]);
@@ -68,61 +74,61 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const seekToAbsoluteTime = useCallback((absoluteTime: number) => {
     if (timelineClips.length === 0) return;
 
-    console.log("Seeking to absolute time:", absoluteTime);
-    setAbsoluteTimelinePosition(absoluteTime);
-
+    console.log("🎯 SEEK: Seeking to absolute time:", absoluteTime);
+    
     // Find which clip this absolute time falls into
     let accumulatedTime = 0;
+    let targetClip = null;
+    let timeInClip = 0;
+
     for (const clip of timelineClips) {
       const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
       
       if (absoluteTime <= accumulatedTime + clipDuration) {
-        // This is the target clip
-        const timeInClip = absoluteTime - accumulatedTime;
-        console.log("Switching to clip:", clip.id, "time in clip:", timeInClip);
-        
-        setSelectedClip(clip);
-        
-        if (videoRef.current) {
-          const clipStartTime = clip.startTime ?? 0;
-          const videoAbsoluteTime = clipStartTime + timeInClip;
-          videoRef.current.currentTime = videoAbsoluteTime;
-          setCurrentTime(timeInClip);
-          
-          if (audioRef.current) {
-            audioRef.current.currentTime = videoAbsoluteTime;
-          }
-        }
+        targetClip = clip;
+        timeInClip = absoluteTime - accumulatedTime;
         break;
       }
       
       accumulatedTime += clipDuration;
     }
+
+    if (targetClip) {
+      console.log("🎯 SEEK: Found target clip:", targetClip.id, "time in clip:", timeInClip);
+      
+      // Update store state first
+      setAbsoluteTimelinePosition(absoluteTime);
+      setCurrentTime(timeInClip);
+      setSelectedClip(targetClip);
+      
+      // Then update video/audio elements
+      if (videoRef.current) {
+        const clipStartTime = targetClip.startTime ?? 0;
+        const videoAbsoluteTime = clipStartTime + timeInClip;
+        videoRef.current.currentTime = videoAbsoluteTime;
+        
+        if (audioRef.current) {
+          audioRef.current.currentTime = videoAbsoluteTime;
+        }
+      }
+    }
   }, [timelineClips, setSelectedClip, setCurrentTime, setAbsoluteTimelinePosition]);
 
-  // Sync audio with video when playing
-  useEffect(() => {
-    const video = videoRef.current;
-    const audio = audioRef.current;
-    
-    if (video && audio && isPlaying) {
-      const syncInterval = setInterval(() => {
-        if (Math.abs(video.currentTime - audio.currentTime) > 0.2) {
-          audio.currentTime = video.currentTime;
-        }
-      }, 100);
-      
-      return () => clearInterval(syncInterval);
-    }
-  }, [isPlaying]);
-
   const togglePlay = useCallback(() => {
-    if (!selectedClip || !videoRef.current) return;
+    if (!selectedClip || !videoRef.current) {
+      console.log("🎮 PLAY: No clip selected or video ref not available");
+      return;
+    }
+    
     const video = videoRef.current;
     const audio = audioRef.current;
+
+    console.log("🎮 PLAY: Toggle play called, current paused:", video.paused);
 
     if (video.paused) {
+      // Update clip metadata if needed
       if (selectedClip.originalDuration === 0 && video.duration > 0) {
+        console.log("🎮 PLAY: Updating clip metadata with video duration:", video.duration);
         const updatedClip = {
           ...selectedClip,
           originalDuration: video.duration,
@@ -131,29 +137,26 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         setSelectedClip(updatedClip);
       }
 
-      const playPromise = video.play();
-      if (playPromise) {
-        playPromise.catch(e => console.error("Video play error:", e));
-      }
-      
-      if (audio) {
-        audio.play().catch(e => console.error("Audio play error:", e));
-      }
+      // Start playback
+      video.play().catch(e => console.error("🎮 PLAY: Video play error:", e));
+      audio?.play().catch(e => console.error("🎮 PLAY: Audio play error:", e));
     } else {
+      // Pause playback
       video.pause();
       audio?.pause();
     }
   }, [selectedClip, setSelectedClip]);
 
   const jumpToStart = useCallback(() => {
-    console.log("Jumping to start of timeline");
+    console.log("🎯 JUMP: Jumping to timeline start");
     resetToTimelineStart();
     
+    // Reset video/audio elements to first clip start
     if (videoRef.current && timelineClips.length > 0) {
       const firstClip = timelineClips[0];
       const clipStartTime = firstClip.startTime ?? 0;
-      videoRef.current.currentTime = clipStartTime;
       
+      videoRef.current.currentTime = clipStartTime;
       if (audioRef.current) {
         audioRef.current.currentTime = clipStartTime;
       }
@@ -162,12 +165,16 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   const jumpToEnd = useCallback(() => {
     if (!selectedClip || !videoRef.current) return;
+    
     const video = videoRef.current;
     const clipEndTime = selectedClip.endTime ?? video.duration;
     const clipStartTime = selectedClip.startTime ?? 0;
+    const relativeTime = clipEndTime - clipStartTime;
+
+    console.log("🎯 JUMP: Jumping to clip end, relative time:", relativeTime);
 
     video.currentTime = clipEndTime;
-    setCurrentTime(clipEndTime - clipStartTime);
+    setCurrentTime(relativeTime);
     
     // Update absolute timeline position
     const currentClipIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
@@ -177,7 +184,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
       accumulatedTime += clipDuration;
     }
-    accumulatedTime += clipEndTime - clipStartTime;
+    accumulatedTime += relativeTime;
     setAbsoluteTimelinePosition(accumulatedTime);
 
     if (audioRef.current) {
@@ -191,6 +198,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const video = videoRef.current;
     const clipStartTime = selectedClip.startTime ?? 0;
     const absoluteTime = clipStartTime + time;
+    
+    console.log("🎯 SEEK: Seeking to relative time:", time, "absolute time:", absoluteTime);
     
     video.currentTime = absoluteTime;
     setCurrentTime(time);
@@ -212,59 +221,65 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   }, [selectedClip, setCurrentTime, timelineClips, setAbsoluteTimelinePosition]);
 
   const handleClipEnded = useCallback(() => {
-    if (!selectedClip || timelineClips.length === 0) return;
+    if (!selectedClip || timelineClips.length === 0) {
+      console.log("🔄 CLIP-END: No clip selected or no clips in timeline");
+      return;
+    }
 
-    console.log("Clip ended, transitioning to next clip");
+    console.log("🔄 CLIP-END: Current clip ended:", selectedClip.id);
     const currentIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
 
     if (currentIndex >= 0 && currentIndex < timelineClips.length - 1) {
       const nextClip = timelineClips[currentIndex + 1];
-      console.log("Moving to next clip:", nextClip.id);
+      console.log("🔄 CLIP-END: Moving to next clip:", nextClip.id);
       
-      // Calculate absolute position for next clip
-      let accumulatedTime = 0;
+      // Calculate new absolute position (end of current clip)
+      let newAbsolutePosition = 0;
       for (let i = 0; i <= currentIndex; i++) {
         const clip = timelineClips[i];
         const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
-        accumulatedTime += clipDuration;
+        newAbsolutePosition += clipDuration;
       }
       
-      setAbsoluteTimelinePosition(accumulatedTime);
-      setWasPlaying(isPlaying);
-      setSelectedClip(nextClip);
+      // Store if we were playing
+      const wasPlayingBefore = isPlaying;
       
-      // Immediate transition to next clip
+      // Update state immediately
+      setAbsoluteTimelinePosition(newAbsolutePosition);
+      setSelectedClip(nextClip);
+      setCurrentTime(0);
+      
+      // Update video element
       if (videoRef.current) {
         const nextClipStartTime = nextClip.startTime ?? 0;
         videoRef.current.currentTime = nextClipStartTime;
-        setCurrentTime(0);
         
         if (audioRef.current) {
           audioRef.current.currentTime = nextClipStartTime;
         }
         
-        // Continue playing if we were playing - use requestAnimationFrame for better timing
-        if (isPlaying) {
-          requestAnimationFrame(() => {
+        // Continue playing if we were playing before
+        if (wasPlayingBefore) {
+          console.log("🔄 CLIP-END: Continuing playback on next clip");
+          // Use a small delay to ensure video has loaded
+          setTimeout(() => {
             if (videoRef.current && videoRef.current.paused) {
-              videoRef.current.play().catch(e => console.error("Auto-play next clip failed:", e));
+              videoRef.current.play().catch(e => console.error("🔄 CLIP-END: Auto-play failed:", e));
             }
             if (audioRef.current && audioRef.current.paused) {
-              audioRef.current.play().catch(e => console.error("Auto-play next audio failed:", e));
+              audioRef.current.play().catch(e => console.error("🔄 CLIP-END: Audio auto-play failed:", e));
             }
-          });
+          }, 50);
         }
       }
     } else {
       // End of timeline
-      console.log("Reached end of timeline");
-      const video = videoRef.current;
-      const audio = audioRef.current;
-      if (video) video.pause();
-      if (audio) audio.pause();
+      console.log("🔄 CLIP-END: Reached end of timeline, stopping playback");
+      if (videoRef.current) videoRef.current.pause();
+      if (audioRef.current) audioRef.current.pause();
       setIsPlaying(false);
     }
-  }, [selectedClip, timelineClips, isPlaying, setWasPlaying, setSelectedClip, setIsPlaying, setCurrentTime, setAbsoluteTimelinePosition]);
+  }, [selectedClip, timelineClips, isPlaying, setSelectedClip, setCurrentTime, setAbsoluteTimelinePosition, setIsPlaying]);
 
   const value = {
     togglePlay,

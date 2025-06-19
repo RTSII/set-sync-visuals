@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { MediaClip, Transition } from '@/types';
 
@@ -59,7 +60,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     timelineClips: state.timelineClips.map(clip =>
       clip.id === clipId ? { ...clip, ...newProps } : clip
     ),
-    // Update selectedClip if it's the one being updated
     selectedClip: state.selectedClip?.id === clipId ? { ...state.selectedClip, ...newProps } : state.selectedClip
   })),
   
@@ -76,20 +76,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const newClips = [...state.timelineClips, newClip];
         console.log(`Added clip to timeline: ${clip.id}, total clips: ${newClips.length}`);
         
-        // Don't auto-select the new clip, keep current selection or select first if none
-        const shouldSelectFirst = newClips.length === 1;
-        
         return { 
           timelineClips: newClips,
-          selectedClip: shouldSelectFirst ? newClip : state.selectedClip,
-          // Reset timeline to start when adding clips
-          absoluteTimelinePosition: 0,
-          currentTime: 0
+          // Don't change selectedClip here - let resetToTimelineStart handle it
         };
       });
       
-      // Call reset function after adding clip
-      get().resetToTimelineStart();
+      // Always reset to timeline start after adding clips
+      setTimeout(() => {
+        get().resetToTimelineStart();
+      }, 0);
     }
   },
 
@@ -126,7 +122,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   audioMarkers: [],
   setAudioMarkers: (updater) => set(state => ({ audioMarkers: typeof updater === 'function' ? updater(state.audioMarkers) : updater })),
   addAudioMarker: (time: number) => {
-    // Avoid duplicate markers at the same spot
     if (!get().audioMarkers.some(m => Math.abs(m - time) < 0.1)) {
       set(state => ({ audioMarkers: [...state.audioMarkers, time].sort((a, b) => a - b) }));
     }
@@ -151,17 +146,31 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setTrimmingClipId: (id) => set({ trimmingClipId: id }),
 
   absoluteTimelinePosition: 0,
-  setAbsoluteTimelinePosition: (position) => set({ absoluteTimelinePosition: position }),
+  setAbsoluteTimelinePosition: (position) => {
+    console.log("Setting absolute timeline position:", position);
+    set({ absoluteTimelinePosition: position });
+  },
 
   resetToTimelineStart: () => {
     const state = get();
+    console.log("🔄 RESET: Resetting to timeline start");
+    
     if (state.timelineClips.length > 0) {
       const firstClip = state.timelineClips[0];
-      console.log("Resetting to timeline start, selecting first clip:", firstClip.id);
+      console.log("🔄 RESET: Selecting first clip and resetting positions");
+      
       set({
         selectedClip: firstClip,
         currentTime: 0,
-        absoluteTimelinePosition: 0
+        absoluteTimelinePosition: 0,
+        isPlaying: false // Stop playback when resetting
+      });
+    } else {
+      console.log("🔄 RESET: No clips available, resetting positions only");
+      set({
+        currentTime: 0,
+        absoluteTimelinePosition: 0,
+        isPlaying: false
       });
     }
   },

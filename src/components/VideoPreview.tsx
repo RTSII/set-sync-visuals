@@ -15,7 +15,6 @@ const VideoPreview = () => {
     jumpToEnd,
     handleClipEnded,
     seekToTime,
-    getAbsoluteTimePosition,
   } = useEditor();
 
   const {
@@ -23,8 +22,6 @@ const VideoPreview = () => {
     isPlaying,
     currentTime,
     setCurrentTime,
-    wasPlaying,
-    setWasPlaying,
     updateClip,
     timelineClips,
     absoluteTimelinePosition,
@@ -39,16 +36,19 @@ const VideoPreview = () => {
 
   const handleTimeUpdate = () => {
     if (videoRef.current && selectedClip) {
-      const absoluteTime = videoRef.current.currentTime;
+      const videoCurrentTime = videoRef.current.currentTime;
       const clipStartTime = selectedClip.startTime ?? 0;
       const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
 
+      console.log("🎬 TIME-UPDATE: Video time:", videoCurrentTime, "Clip end:", clipEndTime);
+
       // Check if we've reached the end of the current clip
-      if (clipEndTime && absoluteTime >= clipEndTime - 0.05) {
-        console.log("Clip reached end, triggering transition");
+      if (clipEndTime && videoCurrentTime >= clipEndTime - 0.1) {
+        console.log("🎬 TIME-UPDATE: Clip reached end, triggering transition");
         handleClipEnded();
       } else {
-        const relativeTime = Math.max(0, absoluteTime - clipStartTime);
+        // Update relative time within the clip
+        const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
         setCurrentTime(relativeTime);
         
         // Update absolute timeline position
@@ -68,9 +68,11 @@ const VideoPreview = () => {
   const handleLoadedMetadata = () => {
     if (videoRef.current && selectedClip) {
       const videoDuration = videoRef.current.duration || 0;
-      console.log("Video metadata loaded for clip:", selectedClip.id, "duration:", videoDuration);
+      console.log("🎬 METADATA: Video loaded for clip:", selectedClip.id, "duration:", videoDuration);
 
+      // Update clip metadata if needed
       if (!selectedClip.originalDuration || selectedClip.originalDuration === 0) {
+        console.log("🎬 METADATA: Updating clip with video duration");
         updateClip(selectedClip.id, {
           startTime: 0,
           endTime: videoDuration,
@@ -86,22 +88,12 @@ const VideoPreview = () => {
         videoRef.current.currentTime = clipStartTime;
         setClipDisplayDuration(clipDuration || videoDuration);
         setCurrentTime(0);
-
-        // Handle auto-play for continuing playback
-        if (wasPlaying && isPlaying) {
-          requestAnimationFrame(() => {
-            if (videoRef.current && videoRef.current.paused) {
-              videoRef.current.play().catch(e => console.error("Autoplay failed", e));
-            }
-          });
-          setWasPlaying(false);
-        }
       }
     }
   };
 
   const handleVideoEnded = () => {
-    console.log("Video element ended event");
+    console.log("🎬 VIDEO-END: Video element ended event");
     handleClipEnded();
   };
 
@@ -113,27 +105,26 @@ const VideoPreview = () => {
     const progress = clickX / rect.width;
     const newTime = progress * clipDisplayDuration;
     
+    console.log("🎬 PROGRESS-CLICK: Seeking to time:", newTime);
     seekToTime(newTime);
   };
 
-  // Reset to clip start when selectedClip changes
+  // Reset video when selectedClip changes
   React.useEffect(() => {
     if (videoRef.current && selectedClip) {
       const clipStartTime = selectedClip.startTime ?? 0;
       const clipEndTime = selectedClip.endTime ?? selectedClip.originalDuration;
       const clipDuration = (clipEndTime || 0) - clipStartTime;
 
-      console.log("Selected clip changed:", selectedClip.id, "Setting video time to:", clipStartTime);
+      console.log("🎬 CLIP-CHANGE: Selected clip changed to:", selectedClip.id);
+      console.log("🎬 CLIP-CHANGE: Setting video time to:", clipStartTime);
       
-      // Only update video time if it's significantly different
-      if (Math.abs(videoRef.current.currentTime - clipStartTime) > 0.2) {
-        videoRef.current.currentTime = clipStartTime;
-      }
-      
+      // Set video to clip start time
+      videoRef.current.currentTime = clipStartTime;
       setClipDisplayDuration(clipDuration > 0 ? clipDuration : (videoRef.current.duration || 8));
       setCurrentTime(0);
     }
-  }, [selectedClip?.id, selectedClip?.startTime, selectedClip?.endTime, selectedClip, setCurrentTime, videoRef]);
+  }, [selectedClip?.id, selectedClip?.startTime, selectedClip?.endTime, setCurrentTime]);
 
   const toggleFullScreen = () => {
     const elem = previewContainerRef.current;
@@ -183,7 +174,9 @@ const VideoPreview = () => {
               alt="RVJ Logo"
               className="w-1/3 h-1/3 object-contain opacity-50"
             />
-            <div className="text-center text-muted-foreground">
+            <div className="text-center text-muted-fore
+
+">
               <p className="text-lg font-medium">Select a clip to preview</p>
               <p className="text-sm">Use Space to play/pause, J/L for -10s/+10s, ←/→ for -5s/+5s</p>
             </div>
