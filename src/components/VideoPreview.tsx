@@ -30,6 +30,7 @@ const VideoPreview = () => {
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
   const previewContainerRef = React.useRef<HTMLDivElement>(null);
   const isTransitioning = React.useRef(false);
+  const transitionTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
@@ -41,14 +42,22 @@ const VideoPreview = () => {
       const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
 
       // Check if we've reached the end of the current clip
-      if (clipEndTime && videoCurrentTime >= clipEndTime - 0.05) {
-        console.log("🎬 TIME-UPDATE: Clip reached end, triggering transition");
+      if (clipEndTime && videoCurrentTime >= clipEndTime - 0.02) {
+        console.log("🎬 TIME-UPDATE: Clip reached end, triggering seamless transition");
         isTransitioning.current = true;
+        
+        // Clear any existing timeout
+        if (transitionTimeoutRef.current) {
+          clearTimeout(transitionTimeoutRef.current);
+        }
+        
+        // Trigger transition immediately
         handleClipEnded();
-        // Reset transition flag after a short delay
-        setTimeout(() => {
+        
+        // Reset transition flag after transition should be complete
+        transitionTimeoutRef.current = setTimeout(() => {
           isTransitioning.current = false;
-        }, 100);
+        }, 50);
       } else {
         // Update relative time within the clip
         const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
@@ -130,6 +139,15 @@ const VideoPreview = () => {
       setCurrentTime(0);
     }
   }, [selectedClip?.id, selectedClip?.startTime, selectedClip?.endTime, setCurrentTime]);
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const toggleFullScreen = () => {
     const elem = previewContainerRef.current;

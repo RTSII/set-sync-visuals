@@ -37,38 +37,37 @@ export const useClipTransition = (
         newAbsolutePosition += clipDuration;
       }
       
-      // Store if we were playing before transition
+      // Store playing state before any changes
       const wasPlayingBefore = isPlaying;
       
-      // Update state immediately
-      setAbsoluteTimelinePosition(newAbsolutePosition);
-      setSelectedClip(nextClip);
-      setCurrentTime(0);
-      
-      // Update video element and continue playback seamlessly
-      if (videoRef.current) {
+      // Prepare video element for seamless transition
+      if (videoRef.current && nextClip.src !== selectedClip.src) {
+        const video = videoRef.current;
         const nextClipStartTime = nextClip.startTime ?? 0;
-        console.log("🔄 CLIP-END: Setting video time to:", nextClipStartTime);
         
-        // Set video source and time
-        videoRef.current.currentTime = nextClipStartTime;
+        console.log("🔄 CLIP-END: Preparing seamless transition to:", nextClip.id);
         
-        if (audioRef.current) {
-          audioRef.current.currentTime = nextClipStartTime;
-        }
+        // Update state immediately for UI consistency
+        setAbsoluteTimelinePosition(newAbsolutePosition);
+        setSelectedClip(nextClip);
+        setCurrentTime(0);
         
-        // Continue playing immediately if we were playing before
-        if (wasPlayingBefore) {
-          console.log("🔄 CLIP-END: Continuing seamless playback on next clip");
-          
-          // Use requestAnimationFrame for smoother transition
-          requestAnimationFrame(() => {
-            if (videoRef.current && wasPlayingBefore) {
-              videoRef.current.play().then(() => {
-                console.log("🔄 CLIP-END: Video playback continued successfully");
+        // Handle video source change and time sync
+        if (video.src !== nextClip.src) {
+          // Different video source - need to change src
+          const handleLoadedData = () => {
+            video.currentTime = nextClipStartTime;
+            if (audioRef.current) {
+              audioRef.current.currentTime = nextClipStartTime;
+            }
+            
+            // Continue playing immediately if we were playing
+            if (wasPlayingBefore) {
+              console.log("🔄 CLIP-END: Resuming playback on new clip");
+              video.play().then(() => {
+                console.log("🔄 CLIP-END: Video playback resumed successfully");
               }).catch(e => {
                 console.error("🔄 CLIP-END: Video play failed:", e);
-                // Don't set isPlaying to false here - let the video sync handle it
               });
               
               if (audioRef.current) {
@@ -77,8 +76,39 @@ export const useClipTransition = (
                 );
               }
             }
-          });
+            
+            // Remove the event listener
+            video.removeEventListener('loadeddata', handleLoadedData);
+          };
+          
+          video.addEventListener('loadeddata', handleLoadedData);
+          video.src = nextClip.src;
+        } else {
+          // Same video source - just update time
+          video.currentTime = nextClipStartTime;
+          if (audioRef.current) {
+            audioRef.current.currentTime = nextClipStartTime;
+          }
+          
+          // Continue playing immediately if we were playing
+          if (wasPlayingBefore) {
+            console.log("🔄 CLIP-END: Continuing seamless playback on same video");
+            video.play().catch(e => 
+              console.error("🔄 CLIP-END: Video play failed:", e)
+            );
+            
+            if (audioRef.current) {
+              audioRef.current.play().catch(e => 
+                console.error("🔄 CLIP-END: Audio play failed:", e)
+              );
+            }
+          }
         }
+      } else {
+        // Same video source, just update state
+        setAbsoluteTimelinePosition(newAbsolutePosition);
+        setSelectedClip(nextClip);
+        setCurrentTime(0);
       }
     } else {
       // End of timeline
