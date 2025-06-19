@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
@@ -58,7 +59,7 @@ const VideoPreview = () => {
         // Reset transition flag after transition should be complete
         transitionTimeoutRef.current = setTimeout(() => {
           isTransitioning.current = false;
-        }, 100);
+        }, 500); // Increased timeout to handle loading delays
       } else {
         // Update relative time within the clip - but don't update absolute position
         const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
@@ -170,9 +171,9 @@ const VideoPreview = () => {
   const currentClipIndex = selectedClip ? timelineClips.findIndex(c => c.id === selectedClip.id) + 1 : 0;
   const totalClips = timelineClips.length;
 
-  // Determine if video is actually playing (check both video element and store state)
+  // Determine if video is actually playing - don't show button during transitions
   const videoIsPlaying = videoRef.current ? !videoRef.current.paused : false;
-  const shouldShowPlayButton = !videoIsPlaying;
+  const shouldShowPlayButton = !videoIsPlaying && !isTransitioning.current;
 
   return (
     <div ref={previewContainerRef} className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
@@ -191,7 +192,7 @@ const VideoPreview = () => {
               playsInline
               muted={false}
             />
-            {/* Play button overlay - show when video is not playing */}
+            {/* Play button overlay - show when video is not playing and not transitioning */}
             {shouldShowPlayButton && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <Button
