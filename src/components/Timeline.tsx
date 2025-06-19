@@ -36,6 +36,7 @@ const Timeline = () => {
     addAudioMarker,
     setAudioMarkers,
     selectedClip,
+    absoluteTimelinePosition,
   } = useEditorStore();
 
   const dragItem = useRef<number | null>(null);
@@ -48,8 +49,6 @@ const Timeline = () => {
   const getPlayheadPosition = () => {
     if (timelineClips.length === 0) return '0%';
 
-    const absoluteTime = getAbsoluteTimePosition();
-    
     // Calculate total duration of all clips
     const totalDuration = timelineClips.reduce((acc, clip) => {
       const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
@@ -58,7 +57,8 @@ const Timeline = () => {
 
     if (totalDuration === 0) return '0%';
 
-    return `${Math.min(100, (absoluteTime / totalDuration) * 100)}%`;
+    // Use absolute timeline position instead of calculating from current clip
+    return `${Math.min(100, (absoluteTimelinePosition / totalDuration) * 100)}%`;
   };
 
   const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -66,7 +66,7 @@ const Timeline = () => {
     
     const rect = timelineContainerRef.current.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
-    const progress = clickX / rect.width;
+    const progress = Math.max(0, Math.min(1, clickX / rect.width));
     
     // Calculate total duration of all clips
     const totalDuration = timelineClips.reduce((acc, clip) => {

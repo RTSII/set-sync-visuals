@@ -26,7 +26,9 @@ const VideoPreview = () => {
     wasPlaying,
     setWasPlaying,
     updateClip,
-    timelineClips
+    timelineClips,
+    absoluteTimelinePosition,
+    setAbsoluteTimelinePosition
   } = useEditorStore();
 
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
@@ -42,12 +44,23 @@ const VideoPreview = () => {
       const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
 
       // Check if we've reached the end of the current clip
-      if (clipEndTime && absoluteTime >= clipEndTime - 0.1) {
+      if (clipEndTime && absoluteTime >= clipEndTime - 0.05) {
         console.log("Clip reached end, triggering transition");
         handleClipEnded();
       } else {
         const relativeTime = Math.max(0, absoluteTime - clipStartTime);
         setCurrentTime(relativeTime);
+        
+        // Update absolute timeline position
+        const currentClipIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
+        let accumulatedTime = 0;
+        for (let i = 0; i < currentClipIndex; i++) {
+          const clip = timelineClips[i];
+          const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
+          accumulatedTime += clipDuration;
+        }
+        accumulatedTime += relativeTime;
+        setAbsoluteTimelinePosition(accumulatedTime);
       }
     }
   };
@@ -76,11 +89,11 @@ const VideoPreview = () => {
 
         // Handle auto-play for continuing playback
         if (wasPlaying && isPlaying) {
-          setTimeout(() => {
+          requestAnimationFrame(() => {
             if (videoRef.current && videoRef.current.paused) {
               videoRef.current.play().catch(e => console.error("Autoplay failed", e));
             }
-          }, 150);
+          });
           setWasPlaying(false);
         }
       }

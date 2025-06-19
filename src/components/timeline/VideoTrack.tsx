@@ -17,8 +17,8 @@ interface ThumbnailCache {
 }
 
 const PIXELS_PER_SECOND = 10;
-const MIN_CLIP_DURATION = 0.5; // seconds
-const STANDARD_CLIP_WIDTH = 80; // Fixed width for all clips
+const MIN_CLIP_DURATION = 0.5;
+const STANDARD_CLIP_WIDTH = 80;
 
 const VideoTrack: React.FC<VideoTrackProps> = ({
   dragItem,
@@ -32,6 +32,7 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
   const dragStartRef = useRef({ x: 0, startTime: 0, endTime: 0 });
   const [thumbnailCache, setThumbnailCache] = useState<ThumbnailCache>({});
   const generatingThumbnails = useRef<Set<string>>(new Set());
+  const lastClipCount = useRef<number>(0);
 
   const handleTrimMouseDown = (e: React.MouseEvent, clip: MediaClip, handle: 'left' | 'right') => {
     e.stopPropagation();
@@ -40,7 +41,7 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
     dragStartRef.current = { x: e.clientX, startTime: clip.startTime ?? 0, endTime: clip.endTime ?? clip.originalDuration ?? 0 };
   };
 
-  // Optimized thumbnail generation function
+  // Optimized thumbnail generation function - only generate when really needed
   const generateThumbnail = useCallback((videoSrc: string, clipId: string) => {
     // Prevent duplicate generation
     if (thumbnailCache[clipId] || generatingThumbnails.current.has(clipId)) {
@@ -65,7 +66,7 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
       console.log(`Thumbnail generation timeout for clip: ${clipId}`);
       setThumbnailCache(prev => ({
         ...prev,
-        [clipId]: "data:," // Empty placeholder to prevent retry
+        [clipId]: "data:,"
       }));
       cleanup();
     }, 5000);
@@ -112,19 +113,25 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
     };
   }, [thumbnailCache]);
 
-  // Generate thumbnails only for new clips
+  // Only generate thumbnails when clip count changes or new clips are added
   useEffect(() => {
-    const clipsNeedingThumbnails = timelineClips.filter(
-      clip => !thumbnailCache[clip.id] && !generatingThumbnails.current.has(clip.id) && clip.src
-    );
-    
-    if (clipsNeedingThumbnails.length > 0) {
+    if (timelineClips.length !== lastClipCount.current) {
       console.log("Checking for clips needing thumbnails, total clips:", timelineClips.length);
-      clipsNeedingThumbnails.forEach(clip => {
-        generateThumbnail(clip.src, clip.id);
+      lastClipCount.current = timelineClips.length;
+      
+      // Only generate for clips that truly need thumbnails
+      const clipsNeedingThumbnails = timelineClips.filter(
+        clip => !thumbnailCache[clip.id] && !generatingThumbnails.current.has(clip.id) && clip.src
+      );
+      
+      // Generate thumbnails with a small delay to prevent flooding
+      clipsNeedingThumbnails.forEach((clip, index) => {
+        setTimeout(() => {
+          generateThumbnail(clip.src, clip.id);
+        }, index * 100); // Stagger thumbnail generation
       });
     }
-  }, [timelineClips, thumbnailCache, generateThumbnail]);
+  }, [timelineClips.length, thumbnailCache, generateThumbnail]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -139,7 +146,7 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
         if (newStartTime < dragStartRef.current.endTime - MIN_CLIP_DURATION) {
           updateClip(clip.id, { startTime: newStartTime });
         }
-      } else { // right handle
+      } else {
         const newEndTime = Math.min(clip.originalDuration ?? Infinity, dragStartRef.current.endTime + deltaTime);
         if (newEndTime > (clip.startTime ?? 0) + MIN_CLIP_DURATION) {
           updateClip(clip.id, { endTime: newEndTime });

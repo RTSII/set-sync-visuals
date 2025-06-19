@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { MediaClip, Transition } from '@/types';
 
@@ -45,6 +44,11 @@ interface EditorState {
   trimmingClipId: string | null;
   setTrimmingClipId: (id: string | null) => void;
 
+  absoluteTimelinePosition: number;
+  setAbsoluteTimelinePosition: (position: number) => void;
+
+  resetToTimelineStart: () => void;
+
   loadAudio: (file: File) => Promise<void>;
 }
 
@@ -57,10 +61,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     ),
     // Update selectedClip if it's the one being updated
     selectedClip: state.selectedClip?.id === clipId ? { ...state.selectedClip, ...newProps } : state.selectedClip
-  })), addClipToTimeline: (clip) => {
+  })),
+  
+  addClipToTimeline: (clip) => {
     if (!get().timelineClips.find(c => c.id === clip.id)) {
       set(state => {
-        // Default to 8 seconds initially, will be updated when video metadata loads
         const defaultDuration = 8;
         const newClip: MediaClip = {
           ...clip,
@@ -70,8 +75,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         };
         const newClips = [...state.timelineClips, newClip];
         console.log(`Added clip to timeline: ${clip.id}, total clips: ${newClips.length}`);
-        return { timelineClips: newClips };
+        
+        // Don't auto-select the new clip, keep current selection or select first if none
+        const shouldSelectFirst = newClips.length === 1;
+        
+        return { 
+          timelineClips: newClips,
+          selectedClip: shouldSelectFirst ? newClip : state.selectedClip,
+          // Reset timeline to start when adding clips
+          absoluteTimelinePosition: 0,
+          currentTime: 0
+        };
       });
+      
+      // Call reset function after adding clip
+      get().resetToTimelineStart();
     }
   },
 
@@ -132,12 +150,28 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   trimmingClipId: null,
   setTrimmingClipId: (id) => set({ trimmingClipId: id }),
 
+  absoluteTimelinePosition: 0,
+  setAbsoluteTimelinePosition: (position) => set({ absoluteTimelinePosition: position }),
+
+  resetToTimelineStart: () => {
+    const state = get();
+    if (state.timelineClips.length > 0) {
+      const firstClip = state.timelineClips[0];
+      console.log("Resetting to timeline start, selecting first clip:", firstClip.id);
+      set({
+        selectedClip: firstClip,
+        currentTime: 0,
+        absoluteTimelinePosition: 0
+      });
+    }
+  },
+
   loadAudio: async (file: File) => {
     console.log("🎵 AUDIO UPLOAD: loadAudio called with file:", file.name, "size:", file.size, "type:", file.type);
     
     try {
       console.log("🎵 AUDIO UPLOAD: Step 1 - Setting audio file in store");
-      get().setAudioFile(file); // Store the raw file for export
+      get().setAudioFile(file);
       
       console.log("🎵 AUDIO UPLOAD: Step 2 - Creating object URL");
       const objectUrl = URL.createObjectURL(file);
@@ -145,7 +179,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       get().setAudioSrc(objectUrl);
 
       console.log("🎵 AUDIO UPLOAD: Step 3 - Loading audio metadata");
-      // Set duration from audio file
       const audio = new Audio();
       audio.src = objectUrl;
       
@@ -171,7 +204,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const channelData = audioBuffer.getChannelData(0);
       console.log("🎵 AUDIO UPLOAD: Channel data length:", channelData.length);
 
-      const canvasWidth = 1200; // Corresponds to canvas width attribute
+      const canvasWidth = 1200;
       const samples = Math.floor(channelData.length / canvasWidth);
       console.log("🎵 AUDIO UPLOAD: Samples per pixel:", samples);
       
