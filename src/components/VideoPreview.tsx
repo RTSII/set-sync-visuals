@@ -57,7 +57,7 @@ const VideoPreview = () => {
         // Reset transition flag after transition should be complete
         transitionTimeoutRef.current = setTimeout(() => {
           isTransitioning.current = false;
-        }, 50);
+        }, 100); // Increased timeout for smoother transitions
       } else {
         // Update relative time within the clip - but don't update absolute position
         // The audio timeupdate in useAudioTimeSync drives the absolute position
@@ -113,7 +113,7 @@ const VideoPreview = () => {
     seekToTime(newTime);
   };
 
-  // Reset video when selectedClip changes
+  // Enhanced clip change handler - preserves playback state
   React.useEffect(() => {
     if (videoRef.current && selectedClip) {
       const clipStartTime = selectedClip.startTime ?? 0;
@@ -121,12 +121,16 @@ const VideoPreview = () => {
       const clipDuration = (clipEndTime || 0) - clipStartTime;
 
       console.log("🎬 CLIP-CHANGE: Selected clip changed to:", selectedClip.id);
-      console.log("🎬 CLIP-CHANGE: Setting video time to:", clipStartTime);
+      console.log("🎬 CLIP-CHANGE: Clip start time:", clipStartTime, "duration:", clipDuration);
       
-      // Set video to clip start time
-      videoRef.current.currentTime = clipStartTime;
       setClipDisplayDuration(clipDuration > 0 ? clipDuration : (videoRef.current.duration || 8));
       setCurrentTime(0);
+
+      // Only set video time if it's not already transitioning
+      if (!isTransitioning.current) {
+        console.log("🎬 CLIP-CHANGE: Setting video time to clip start:", clipStartTime);
+        videoRef.current.currentTime = clipStartTime;
+      }
     }
   }, [selectedClip?.id, selectedClip?.startTime, selectedClip?.endTime, setCurrentTime]);
 
@@ -179,6 +183,8 @@ const VideoPreview = () => {
             onEnded={handleVideoEnded}
             onClick={togglePlay}
             preload="metadata"
+            playsInline
+            muted={false}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center flex-col gap-4">

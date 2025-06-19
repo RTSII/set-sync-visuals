@@ -37,66 +37,68 @@ export const useClipTransition = (
         newAbsolutePosition += clipDuration;
       }
       
-      // Store playing state before any changes
-      const wasPlayingBefore = isPlaying;
+      // Store current playing state - CRITICAL for smooth transitions
+      const wasPlaying = !audioRef.current.paused;
+      console.log("🔄 CLIP-END: Audio was playing:", wasPlaying);
       
       // Update state immediately for UI consistency
       setAbsoluteTimelinePosition(newAbsolutePosition);
       setSelectedClip(nextClip);
       setCurrentTime(0);
       
-      // Prepare video element for seamless transition - AUDIO CONTINUES UNINTERRUPTED
-      if (videoRef.current && nextClip.src !== selectedClip.src) {
+      // Handle video transition - AUDIO CONTINUES UNINTERRUPTED
+      if (videoRef.current) {
         const video = videoRef.current;
         const nextClipStartTime = nextClip.startTime ?? 0;
         
         console.log("🔄 CLIP-END: Preparing seamless video transition to:", nextClip.id);
         
-        // Handle video source change - NO AUDIO MANIPULATION
         if (video.src !== nextClip.src) {
-          // Different video source - need to change src
-          const handleLoadedData = () => {
+          // Different video source - need to change src and maintain playback
+          console.log("🔄 CLIP-END: Changing video source from", video.src, "to", nextClip.src);
+          
+          const handleCanPlay = () => {
+            console.log("🔄 CLIP-END: New video can play, syncing to audio time");
+            
             // Sync video to current audio time
             const audioCurrentTime = audioRef.current?.currentTime ?? 0;
             const relativeVideoTime = audioCurrentTime - newAbsolutePosition + nextClipStartTime;
-            video.currentTime = Math.max(nextClipStartTime, relativeVideoTime);
+            const targetTime = Math.max(nextClipStartTime, relativeVideoTime);
             
-            // Continue playing immediately if we were playing
-            if (wasPlayingBefore) {
-              console.log("🔄 CLIP-END: Resuming video playback on new clip");
+            console.log("🔄 CLIP-END: Setting video time to:", targetTime, "audio time:", audioCurrentTime);
+            video.currentTime = targetTime;
+            
+            // CRITICAL: Continue playing immediately if audio is playing
+            if (wasPlaying) {
+              console.log("🔄 CLIP-END: Resuming video playback immediately");
               video.play().then(() => {
-                console.log("🔄 CLIP-END: Video playback resumed successfully");
+                console.log("🔄 CLIP-END: ✅ Video playback resumed successfully");
               }).catch(e => {
-                console.error("🔄 CLIP-END: Video play failed:", e);
+                console.error("🔄 CLIP-END: ❌ Video play failed:", e);
               });
             }
             
             // Remove the event listener
-            video.removeEventListener('loadeddata', handleLoadedData);
+            video.removeEventListener('canplay', handleCanPlay);
           };
           
-          video.addEventListener('loadeddata', handleLoadedData);
+          video.addEventListener('canplay', handleCanPlay);
           video.src = nextClip.src;
+          video.load(); // Force reload
         } else {
-          // Same video source - just update time to sync with audio
+          // Same video source - just update time and maintain playback
+          console.log("🔄 CLIP-END: Same video source, updating time position");
           const audioCurrentTime = audioRef.current?.currentTime ?? 0;
           const relativeVideoTime = audioCurrentTime - newAbsolutePosition + nextClipStartTime;
           video.currentTime = Math.max(nextClipStartTime, relativeVideoTime);
           
-          // Continue playing immediately if we were playing
-          if (wasPlayingBefore) {
-            console.log("🔄 CLIP-END: Continuing seamless video playback on same video");
+          // Continue playing if audio is playing
+          if (wasPlaying && video.paused) {
+            console.log("🔄 CLIP-END: Continuing video playback on same source");
             video.play().catch(e => 
               console.error("🔄 CLIP-END: Video play failed:", e)
             );
           }
-        }
-      } else {
-        // Same video source, just update state - sync to audio time
-        if (videoRef.current && audioRef.current) {
-          const audioCurrentTime = audioRef.current.currentTime;
-          const relativeVideoTime = audioCurrentTime - newAbsolutePosition + (nextClip.startTime ?? 0);
-          videoRef.current.currentTime = Math.max(nextClip.startTime ?? 0, relativeVideoTime);
         }
       }
     } else {
@@ -106,7 +108,7 @@ export const useClipTransition = (
       if (audioRef.current) audioRef.current.pause();
       setIsPlaying(false);
     }
-  }, [selectedClip, timelineClips, isPlaying, setSelectedClip, setCurrentTime, setAbsoluteTimelinePosition, setIsPlaying]);
+  }, [selectedClip, timelineClips, setSelectedClip, setCurrentTime, setAbsoluteTimelinePosition, setIsPlaying]);
 
   return {
     handleClipEnded
