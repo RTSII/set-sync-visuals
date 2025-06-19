@@ -6,6 +6,7 @@ import { useAutoSelect } from '@/hooks/useAutoSelect';
 import { usePlaybackControls } from '@/hooks/usePlaybackControls';
 import { useSeekControls } from '@/hooks/useSeekControls';
 import { useClipTransition } from '@/hooks/useClipTransition';
+import { useAudioTimeSync } from '@/hooks/useAudioTimeSync';
 
 export type { MediaClip };
 
@@ -30,6 +31,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   // Use custom hooks for different concerns
   useVideoSync(videoRef, audioRef);
   useAutoSelect();
+  useAudioTimeSync(videoRef, audioRef); // NEW: Audio-driven timeline sync
   
   const { togglePlay, jumpToStart, jumpToEnd } = usePlaybackControls(videoRef, audioRef);
   const { getAbsoluteTimePosition, seekToAbsoluteTime, seekToTime } = useSeekControls(videoRef, audioRef);

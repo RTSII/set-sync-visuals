@@ -59,20 +59,10 @@ const VideoPreview = () => {
           isTransitioning.current = false;
         }, 50);
       } else {
-        // Update relative time within the clip
+        // Update relative time within the clip - but don't update absolute position
+        // The audio timeupdate in useAudioTimeSync drives the absolute position
         const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
         setCurrentTime(relativeTime);
-        
-        // Update absolute timeline position
-        const currentClipIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
-        let accumulatedTime = 0;
-        for (let i = 0; i < currentClipIndex; i++) {
-          const clip = timelineClips[i];
-          const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
-          accumulatedTime += clipDuration;
-        }
-        accumulatedTime += relativeTime;
-        setAbsoluteTimelinePosition(accumulatedTime);
       }
     }
   };

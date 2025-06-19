@@ -16,6 +16,10 @@ export const useSeekControls = (
   } = useEditorStore();
 
   const getAbsoluteTimePosition = useCallback(() => {
+    // If audio is available, use its current time as the absolute position
+    if (audioRef.current) {
+      return audioRef.current.currentTime;
+    }
     return absoluteTimelinePosition;
   }, [absoluteTimelinePosition]);
 
@@ -23,6 +27,11 @@ export const useSeekControls = (
     if (timelineClips.length === 0) return;
 
     console.log("🎯 SEEK: Seeking to absolute time:", absoluteTime);
+    
+    // Set audio to the absolute time (master timeline)
+    if (audioRef.current) {
+      audioRef.current.currentTime = absoluteTime;
+    }
     
     // Find which clip this absolute time falls into
     let accumulatedTime = 0;
@@ -44,37 +53,26 @@ export const useSeekControls = (
     if (targetClip) {
       console.log("🎯 SEEK: Found target clip:", targetClip.id, "time in clip:", timeInClip);
       
-      // Update store state first
+      // Update store state
       setAbsoluteTimelinePosition(absoluteTime);
       setCurrentTime(timeInClip);
       setSelectedClip(targetClip);
       
-      // Then update video/audio elements
+      // Sync video to the correct position within the clip
       if (videoRef.current) {
         const clipStartTime = targetClip.startTime ?? 0;
         const videoAbsoluteTime = clipStartTime + timeInClip;
         videoRef.current.currentTime = videoAbsoluteTime;
-        
-        if (audioRef.current) {
-          audioRef.current.currentTime = videoAbsoluteTime;
-        }
       }
     }
   }, [timelineClips, setSelectedClip, setCurrentTime, setAbsoluteTimelinePosition]);
 
   const seekToTime = useCallback((time: number) => {
-    if (!videoRef.current || !selectedClip) return;
+    if (!selectedClip) return;
     
-    const video = videoRef.current;
-    const clipStartTime = selectedClip.startTime ?? 0;
-    const absoluteTime = clipStartTime + time;
+    console.log("🎯 SEEK: Seeking to relative time:", time);
     
-    console.log("🎯 SEEK: Seeking to relative time:", time, "absolute time:", absoluteTime);
-    
-    video.currentTime = absoluteTime;
-    setCurrentTime(time);
-    
-    // Update absolute timeline position
+    // Calculate absolute timeline position for this relative time
     const currentClipIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
     let accumulatedTime = 0;
     for (let i = 0; i < currentClipIndex; i++) {
@@ -82,13 +80,11 @@ export const useSeekControls = (
       const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
       accumulatedTime += clipDuration;
     }
-    accumulatedTime += time;
-    setAbsoluteTimelinePosition(accumulatedTime);
+    const absoluteTime = accumulatedTime + time;
     
-    if (audioRef.current) {
-      audioRef.current.currentTime = absoluteTime;
-    }
-  }, [selectedClip, setCurrentTime, timelineClips, setAbsoluteTimelinePosition]);
+    // Use seekToAbsoluteTime to maintain audio as master
+    seekToAbsoluteTime(absoluteTime);
+  }, [selectedClip, timelineClips, seekToAbsoluteTime]);
 
   return {
     getAbsoluteTimePosition,
