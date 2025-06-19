@@ -16,7 +16,8 @@ import {
 
 const Timeline = () => {
   const timelineContainerRef = useRef<HTMLDivElement>(null);
-  const { audioRef, seekToTime } = useEditor();
+  const { audioRef, seekToAbsoluteTime, getAbsoluteTimePosition } = useEditor();
+  
   const {
     timelineClips,
     setTimelineClips,
@@ -41,25 +42,14 @@ const Timeline = () => {
   const dragOverItem = useRef<number | null>(null);
   const ffmpegRef = useRef(new FFmpeg());
   const [draggingMarkerIndex, setDraggingMarkerIndex] = useState<number | null>(null);
+  const [isDraggingProgressBar, setIsDraggingProgressBar] = useState(false);
 
-  // Calculate playhead position based on current clip and time
+  // Calculate playhead position based on absolute timeline position
   const getPlayheadPosition = () => {
-    if (!selectedClip || timelineClips.length === 0) return '0%';
+    if (timelineClips.length === 0) return '0%';
 
-    const currentClipIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
-    if (currentClipIndex === -1) return '0%';
-
-    // Calculate total duration of clips before current clip
-    let totalDurationBefore = 0;
-    for (let i = 0; i < currentClipIndex; i++) {
-      const clip = timelineClips[i];
-      const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
-      totalDurationBefore += clipDuration;
-    }
-
-    // Add current time within current clip
-    const totalCurrentTime = totalDurationBefore + currentTime;
-
+    const absoluteTime = getAbsoluteTimePosition();
+    
     // Calculate total duration of all clips
     const totalDuration = timelineClips.reduce((acc, clip) => {
       const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
@@ -68,11 +58,11 @@ const Timeline = () => {
 
     if (totalDuration === 0) return '0%';
 
-    return `${Math.min(100, (totalCurrentTime / totalDuration) * 100)}%`;
+    return `${Math.min(100, (absoluteTime / totalDuration) * 100)}%`;
   };
 
   const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!timelineContainerRef.current || !selectedClip) return;
+    if (!timelineContainerRef.current || isDraggingProgressBar) return;
     
     const rect = timelineContainerRef.current.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
@@ -87,20 +77,13 @@ const Timeline = () => {
     if (totalDuration === 0) return;
     
     const targetTime = progress * totalDuration;
-    
-    // Find which clip this time falls into
-    let accumulatedTime = 0;
-    for (const clip of timelineClips) {
-      const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
-      
-      if (targetTime <= accumulatedTime + clipDuration) {
-        const timeInClip = targetTime - accumulatedTime;
-        seekToTime(timeInClip);
-        break;
-      }
-      
-      accumulatedTime += clipDuration;
-    }
+    seekToAbsoluteTime(targetTime);
+  };
+
+  const handleProgressBarMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    setIsDraggingProgressBar(true);
+    handleTimelineClick(e);
   };
 
   useEffect(() => {
@@ -113,6 +96,21 @@ const Timeline = () => {
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      if (isDraggingProgressBar && timelineContainerRef.current) {
+        const rect = timelineContainerRef.current.getBoundingClientRect();
+        const progress = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        
+        const totalDuration = timelineClips.reduce((acc, clip) => {
+          const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
+          return acc + clipDuration;
+        }, 0);
+        
+        if (totalDuration > 0) {
+          const targetTime = progress * totalDuration;
+          seekToAbsoluteTime(targetTime);
+        }
+      }
+
       if (draggingMarkerIndex === null || !timelineContainerRef.current || duration === 0) return;
 
       const timelineRect = timelineContainerRef.current.getBoundingClientRect();
@@ -126,10 +124,11 @@ const Timeline = () => {
     };
 
     const handleMouseUp = () => {
+      setIsDraggingProgressBar(false);
       setDraggingMarkerIndex(null);
     };
 
-    if (draggingMarkerIndex !== null) {
+    if (isDraggingProgressBar || draggingMarkerIndex !== null) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     }
@@ -138,7 +137,7 @@ const Timeline = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [draggingMarkerIndex, audioMarkers, setAudioMarkers, duration]);
+  }, [isDraggingProgressBar, draggingMarkerIndex, audioMarkers, setAudioMarkers, duration, timelineClips, seekToAbsoluteTime]);
 
   const handleDropOnTimeline = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -172,7 +171,6 @@ const Timeline = () => {
     if (currentTransition) {
       updateClip(clipId, { transition: null });
     } else {
-      // Add a default 1s crossfade transition
       updateClip(clipId, { transition: { type: 'crossfade', duration: 1 } });
     }
   };
@@ -198,7 +196,7 @@ const Timeline = () => {
       return acc + Math.max(0, duration);
     }, 0);
 
-    if (totalDuration > 300) { // Notify for videos longer than 5 minutes
+    if (totalDuration > 300) {
       toast.info("Long export started...", {
         description: "Exporting long videos can be memory intensive and may take a while. Please keep this tab open and active.",
         duration: 8000
@@ -259,9 +257,13 @@ const Timeline = () => {
         >
           <TimelineRuler />
 
-          {/* Enhanced playhead */}
-          <div className="absolute top-4 bottom-0 w-0.5 bg-primary z-30 shadow-lg" style={{ left: playheadPosition }}>
-            <div className="h-2 w-2 rounded-full bg-primary border-2 border-background absolute -top-1 -translate-x-1/2 shadow-lg"></div>
+          {/* Enhanced playhead with scrubbing capability */}
+          <div 
+            className="absolute top-4 bottom-0 w-0.5 bg-primary z-30 shadow-lg cursor-ew-resize" 
+            style={{ left: playheadPosition }}
+            onMouseDown={handleProgressBarMouseDown}
+          >
+            <div className="h-2 w-2 rounded-full bg-primary border-2 border-background absolute -top-1 -translate-x-1/2 shadow-lg cursor-grab active:cursor-grabbing"></div>
             <div className="absolute top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-primary/80 to-primary/60"></div>
           </div>
 

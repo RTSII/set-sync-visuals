@@ -12,8 +12,10 @@ interface EditorContextType {
   jumpToEnd: () => void;
   handleClipEnded: () => void;
   seekToTime: (time: number) => void;
+  seekToAbsoluteTime: (absoluteTime: number) => void;
   videoRef: React.RefObject<HTMLVideoElement>;
   audioRef: React.RefObject<HTMLAudioElement>;
+  getAbsoluteTimePosition: () => number;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -53,13 +55,69 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [setIsPlaying]);
 
+  // Calculate absolute time position in the timeline
+  const getAbsoluteTimePosition = useCallback(() => {
+    if (!selectedClip || timelineClips.length === 0) return 0;
+
+    const currentClipIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
+    if (currentClipIndex === -1) return 0;
+
+    // Calculate total duration of clips before current clip
+    let totalDurationBefore = 0;
+    for (let i = 0; i < currentClipIndex; i++) {
+      const clip = timelineClips[i];
+      const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
+      totalDurationBefore += clipDuration;
+    }
+
+    return totalDurationBefore + currentTime;
+  }, [selectedClip, timelineClips, currentTime]);
+
+  const seekToAbsoluteTime = useCallback((absoluteTime: number) => {
+    if (timelineClips.length === 0) return;
+
+    // Find which clip this absolute time falls into
+    let accumulatedTime = 0;
+    for (const clip of timelineClips) {
+      const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
+      
+      if (absoluteTime <= accumulatedTime + clipDuration) {
+        // This is the target clip
+        const timeInClip = absoluteTime - accumulatedTime;
+        setSelectedClip(clip);
+        
+        if (videoRef.current) {
+          const clipStartTime = clip.startTime ?? 0;
+          const videoAbsoluteTime = clipStartTime + timeInClip;
+          videoRef.current.currentTime = videoAbsoluteTime;
+          setCurrentTime(timeInClip);
+          
+          if (audioRef.current) {
+            audioRef.current.currentTime = videoAbsoluteTime;
+          }
+        }
+        break;
+      }
+      
+      accumulatedTime += clipDuration;
+    }
+  }, [timelineClips, setSelectedClip, setCurrentTime]);
+
+  // Sync audio with video when playing
   useEffect(() => {
     const video = videoRef.current;
     const audio = audioRef.current;
-    if (video && audio && isPlaying && Math.abs(video.currentTime - audio.currentTime) > 0.1) {
-      audio.currentTime = video.currentTime;
+    
+    if (video && audio && isPlaying) {
+      const syncInterval = setInterval(() => {
+        if (Math.abs(video.currentTime - audio.currentTime) > 0.2) {
+          audio.currentTime = video.currentTime;
+        }
+      }, 100);
+      
+      return () => clearInterval(syncInterval);
     }
-  }, [currentTime, isPlaying]);
+  }, [isPlaying]);
 
   const togglePlay = useCallback(() => {
     if (!selectedClip || !videoRef.current) return;
@@ -76,8 +134,14 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         setSelectedClip(updatedClip);
       }
 
-      video.play().catch(e => console.error("Video play error:", e));
-      audio?.play().catch(e => console.error("Audio play error:", e));
+      const playPromise = video.play();
+      if (playPromise) {
+        playPromise.catch(e => console.error("Video play error:", e));
+      }
+      
+      if (audio) {
+        audio.play().catch(e => console.error("Audio play error:", e));
+      }
     } else {
       video.pause();
       audio?.pause();
@@ -85,18 +149,18 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   }, [selectedClip, setSelectedClip]);
 
   const jumpToStart = useCallback(() => {
-    if (!videoRef.current) return;
-    const video = videoRef.current;
+    if (timelineClips.length === 0) return;
     
-    // Jump to beginning of entire project (first clip)
-    if (timelineClips.length > 0) {
-      const firstClip = timelineClips[0];
-      setSelectedClip(firstClip);
-      video.currentTime = firstClip.startTime ?? 0;
+    const firstClip = timelineClips[0];
+    setSelectedClip(firstClip);
+    
+    if (videoRef.current) {
+      const clipStartTime = firstClip.startTime ?? 0;
+      videoRef.current.currentTime = clipStartTime;
       setCurrentTime(0);
       
       if (audioRef.current) {
-        audioRef.current.currentTime = firstClip.startTime ?? 0;
+        audioRef.current.currentTime = clipStartTime;
       }
     }
   }, [timelineClips, setSelectedClip, setCurrentTime]);
@@ -139,14 +203,31 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       const nextClip = timelineClips[currentIndex + 1];
       setWasPlaying(isPlaying);
       setSelectedClip(nextClip);
+      
+      // Ensure smooth transition to next clip
+      setTimeout(() => {
+        if (videoRef.current && isPlaying) {
+          const nextClipStartTime = nextClip.startTime ?? 0;
+          videoRef.current.currentTime = nextClipStartTime;
+          setCurrentTime(0);
+          
+          if (audioRef.current) {
+            audioRef.current.currentTime = nextClipStartTime;
+          }
+          
+          videoRef.current.play().catch(e => console.error("Auto-play next clip failed:", e));
+          audioRef.current?.play().catch(e => console.error("Auto-play next audio failed:", e));
+        }
+      }, 50);
     } else {
+      // End of timeline
       const video = videoRef.current;
       const audio = audioRef.current;
       if (video) video.pause();
       if (audio) audio.pause();
       setIsPlaying(false);
     }
-  }, [selectedClip, timelineClips, isPlaying, setWasPlaying, setSelectedClip, setIsPlaying]);
+  }, [selectedClip, timelineClips, isPlaying, setWasPlaying, setSelectedClip, setIsPlaying, setCurrentTime]);
 
   const value = {
     togglePlay,
@@ -154,8 +235,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     jumpToEnd,
     handleClipEnded,
     seekToTime,
+    seekToAbsoluteTime,
     videoRef,
     audioRef,
+    getAbsoluteTimePosition,
   };
 
   return (

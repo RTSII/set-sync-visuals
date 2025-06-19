@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
@@ -15,6 +14,7 @@ const VideoPreview = () => {
     jumpToEnd,
     handleClipEnded,
     seekToTime,
+    getAbsoluteTimePosition,
   } = useEditor();
 
   const {
@@ -40,13 +40,12 @@ const VideoPreview = () => {
       const clipStartTime = selectedClip.startTime ?? 0;
       const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
 
-      // Check if we've reached the end of the current clip
-      if (clipEndTime && absoluteTime >= clipEndTime - 0.1) {
-        videoRef.current.pause();
+      // More precise clip end detection
+      if (clipEndTime && absoluteTime >= clipEndTime - 0.05) {
         handleClipEnded();
       } else {
-        const relativeTime = absoluteTime - clipStartTime;
-        setCurrentTime(Math.max(0, relativeTime));
+        const relativeTime = Math.max(0, absoluteTime - clipStartTime);
+        setCurrentTime(relativeTime);
       }
     }
   };
@@ -71,8 +70,10 @@ const VideoPreview = () => {
         setClipDisplayDuration(clipDuration || videoDuration);
         setCurrentTime(0);
 
-        if (wasPlaying) {
+        // Improved auto-play logic
+        if (wasPlaying && isPlaying) {
           setTimeout(() => {
+            if (videoRef.current && !videoRef.current.paused) return; // Already playing
             videoRef.current?.play().catch(e => console.error("Autoplay failed", e));
           }, 100);
           setWasPlaying(false);
@@ -102,7 +103,11 @@ const VideoPreview = () => {
       const clipEndTime = selectedClip.endTime ?? selectedClip.originalDuration;
       const clipDuration = (clipEndTime || 0) - clipStartTime;
 
-      videoRef.current.currentTime = clipStartTime;
+      // Only update if video is not already at the correct position
+      if (Math.abs(videoRef.current.currentTime - clipStartTime) > 0.1) {
+        videoRef.current.currentTime = clipStartTime;
+      }
+      
       setClipDisplayDuration(clipDuration > 0 ? clipDuration : (videoRef.current.duration || 8));
       setCurrentTime(0);
     }
