@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
@@ -25,7 +24,8 @@ const VideoPreview = () => {
     updateClip,
     timelineClips,
     absoluteTimelinePosition,
-    setAbsoluteTimelinePosition
+    setAbsoluteTimelinePosition,
+    isAudioMaster
   } = useEditorStore();
 
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
@@ -170,6 +170,10 @@ const VideoPreview = () => {
   const currentClipIndex = selectedClip ? timelineClips.findIndex(c => c.id === selectedClip.id) + 1 : 0;
   const totalClips = timelineClips.length;
 
+  // Determine if video is actually playing (check both video element and store state)
+  const videoIsPlaying = videoRef.current ? !videoRef.current.paused : false;
+  const shouldShowPlayButton = !videoIsPlaying;
+
   return (
     <div ref={previewContainerRef} className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
       <div className="bg-black flex items-center justify-center relative group overflow-hidden">
@@ -187,8 +191,8 @@ const VideoPreview = () => {
               playsInline
               muted={false}
             />
-            {/* Play button overlay - only show when not playing */}
-            {!isPlaying && (
+            {/* Play button overlay - show when video is not playing */}
+            {shouldShowPlayButton && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <Button
                   size="icon"
@@ -221,7 +225,7 @@ const VideoPreview = () => {
             <Rewind className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={togglePlay} title="Play/Pause (Space)">
-            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            {videoIsPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
           </Button>
           <Button variant="ghost" size="icon" onClick={jumpToEnd} title="Jump to clip end">
             <FastForward className="h-4 w-4" />
