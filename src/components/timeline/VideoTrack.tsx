@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useEditorStore } from '@/lib/store';
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
   const dragClipRef = useRef<MediaClip | null>(null);
   const dragStartRef = useRef({ x: 0, startTime: 0, endTime: 0 });
   const [thumbnailCache, setThumbnailCache] = useState<ThumbnailCache>({});
+  const generatingThumbnails = useRef<Set<string>>(new Set());
 
   const handleTrimMouseDown = (e: React.MouseEvent, clip: MediaClip, handle: 'left' | 'right') => {
     e.stopPropagation();
@@ -37,31 +39,39 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
     dragClipRef.current = clip;
     dragStartRef.current = { x: e.clientX, startTime: clip.startTime ?? 0, endTime: clip.endTime ?? clip.originalDuration ?? 0 };
   };
-  // Function to generate thumbnail from video source
+
+  // Optimized thumbnail generation function
   const generateThumbnail = useCallback((videoSrc: string, clipId: string) => {
-    if (thumbnailCache[clipId]) return;
+    // Prevent duplicate generation
+    if (thumbnailCache[clipId] || generatingThumbnails.current.has(clipId)) {
+      return;
+    }
 
     console.log(`Generating thumbnail for clip: ${clipId}`);
+    generatingThumbnails.current.add(clipId);
 
     const video = document.createElement('video');
     video.crossOrigin = "anonymous";
     video.src = videoSrc;
     video.muted = true;
-    video.preload = "auto";
+    video.preload = "metadata";
 
-    // Add a timeout to handle cases where metadata might not load
+    const cleanup = () => {
+      generatingThumbnails.current.delete(clipId);
+      video.remove();
+    };
+
     const timeoutId = setTimeout(() => {
       console.log(`Thumbnail generation timeout for clip: ${clipId}`);
-      // Fall back to placeholder
       setThumbnailCache(prev => ({
         ...prev,
         [clipId]: "data:," // Empty placeholder to prevent retry
       }));
-    }, 5000); // 5 seconds timeout
+      cleanup();
+    }, 5000);
 
     video.onloadedmetadata = () => {
       console.log(`Video metadata loaded for thumbnail: ${clipId}, duration: ${video.duration}`);
-      // Set to first frame (0.5 second to ensure we have a good frame)
       video.currentTime = Math.min(0.5, video.duration / 3);
     };
 
@@ -69,9 +79,8 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
       clearTimeout(timeoutId);
 
       try {
-        // Create canvas and draw video frame
         const canvas = document.createElement('canvas');
-        canvas.width = 160; // Double size for better quality
+        canvas.width = 160;
         canvas.height = 90;
         const ctx = canvas.getContext('2d');
 
@@ -85,29 +94,36 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
           }));
         } else {
           console.error(`Failed to get canvas context or video dimensions for clip: ${clipId}`);
+          setThumbnailCache(prev => ({ ...prev, [clipId]: "data:," }));
         }
       } catch (err) {
         console.error(`Error generating thumbnail for clip ${clipId}:`, err);
+        setThumbnailCache(prev => ({ ...prev, [clipId]: "data:," }));
       } finally {
-        // Clean up
-        video.remove();
+        cleanup();
       }
     };
 
     video.onerror = () => {
       clearTimeout(timeoutId);
       console.error(`Error loading video for thumbnail: ${clipId}`);
+      setThumbnailCache(prev => ({ ...prev, [clipId]: "data:," }));
+      cleanup();
     };
   }, [thumbnailCache]);
 
-  // Generate thumbnails for clips when they're added
+  // Generate thumbnails only for new clips
   useEffect(() => {
-    console.log("Checking for clips needing thumbnails, total clips:", timelineClips.length);
-    timelineClips.forEach(clip => {
-      if (!thumbnailCache[clip.id] && clip.src) {
+    const clipsNeedingThumbnails = timelineClips.filter(
+      clip => !thumbnailCache[clip.id] && !generatingThumbnails.current.has(clip.id) && clip.src
+    );
+    
+    if (clipsNeedingThumbnails.length > 0) {
+      console.log("Checking for clips needing thumbnails, total clips:", timelineClips.length);
+      clipsNeedingThumbnails.forEach(clip => {
         generateThumbnail(clip.src, clip.id);
-      }
-    });
+      });
+    }
   }, [timelineClips, thumbnailCache, generateThumbnail]);
 
   useEffect(() => {
@@ -186,7 +202,8 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
                 onDragEnter={() => (dragOverItem.current = index)}
                 onDragEnd={handleTimelineDragSort}
                 onDragOver={(e) => e.stopPropagation()}
-              >                  {/* Show thumbnail if available, otherwise show video icon */}
+              >
+                {/* Show thumbnail if available, otherwise show video icon */}
                 {thumbnailCache[clip.id] && thumbnailCache[clip.id] !== "data:," ? (
                   <img
                     src={thumbnailCache[clip.id]}

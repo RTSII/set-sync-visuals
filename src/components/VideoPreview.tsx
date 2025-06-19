@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
@@ -40,8 +41,9 @@ const VideoPreview = () => {
       const clipStartTime = selectedClip.startTime ?? 0;
       const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
 
-      // More precise clip end detection
-      if (clipEndTime && absoluteTime >= clipEndTime - 0.05) {
+      // Check if we've reached the end of the current clip
+      if (clipEndTime && absoluteTime >= clipEndTime - 0.1) {
+        console.log("Clip reached end, triggering transition");
         handleClipEnded();
       } else {
         const relativeTime = Math.max(0, absoluteTime - clipStartTime);
@@ -53,6 +55,7 @@ const VideoPreview = () => {
   const handleLoadedMetadata = () => {
     if (videoRef.current && selectedClip) {
       const videoDuration = videoRef.current.duration || 0;
+      console.log("Video metadata loaded for clip:", selectedClip.id, "duration:", videoDuration);
 
       if (!selectedClip.originalDuration || selectedClip.originalDuration === 0) {
         updateClip(selectedClip.id, {
@@ -66,16 +69,18 @@ const VideoPreview = () => {
         const clipEndTime = selectedClip.endTime ?? videoDuration;
         const clipDuration = clipEndTime - clipStartTime;
 
+        // Set video to clip start time
         videoRef.current.currentTime = clipStartTime;
         setClipDisplayDuration(clipDuration || videoDuration);
         setCurrentTime(0);
 
-        // Improved auto-play logic
+        // Handle auto-play for continuing playback
         if (wasPlaying && isPlaying) {
           setTimeout(() => {
-            if (videoRef.current && !videoRef.current.paused) return; // Already playing
-            videoRef.current?.play().catch(e => console.error("Autoplay failed", e));
-          }, 100);
+            if (videoRef.current && videoRef.current.paused) {
+              videoRef.current.play().catch(e => console.error("Autoplay failed", e));
+            }
+          }, 150);
           setWasPlaying(false);
         }
       }
@@ -83,6 +88,7 @@ const VideoPreview = () => {
   };
 
   const handleVideoEnded = () => {
+    console.log("Video element ended event");
     handleClipEnded();
   };
 
@@ -97,14 +103,17 @@ const VideoPreview = () => {
     seekToTime(newTime);
   };
 
+  // Reset to clip start when selectedClip changes
   React.useEffect(() => {
     if (videoRef.current && selectedClip) {
       const clipStartTime = selectedClip.startTime ?? 0;
       const clipEndTime = selectedClip.endTime ?? selectedClip.originalDuration;
       const clipDuration = (clipEndTime || 0) - clipStartTime;
 
-      // Only update if video is not already at the correct position
-      if (Math.abs(videoRef.current.currentTime - clipStartTime) > 0.1) {
+      console.log("Selected clip changed:", selectedClip.id, "Setting video time to:", clipStartTime);
+      
+      // Only update video time if it's significantly different
+      if (Math.abs(videoRef.current.currentTime - clipStartTime) > 0.2) {
         videoRef.current.currentTime = clipStartTime;
       }
       

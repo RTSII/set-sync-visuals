@@ -35,11 +35,14 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     currentTime
   } = useEditorStore();
 
+  // Auto-select first clip when clips are added and reset to beginning
   useEffect(() => {
     if (timelineClips.length > 0 && !selectedClip) {
+      console.log("Auto-selecting first clip and resetting to beginning");
       setSelectedClip(timelineClips[0]);
+      setCurrentTime(0);
     }
-  }, [timelineClips, selectedClip, setSelectedClip]);
+  }, [timelineClips, selectedClip, setSelectedClip, setCurrentTime]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -76,6 +79,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const seekToAbsoluteTime = useCallback((absoluteTime: number) => {
     if (timelineClips.length === 0) return;
 
+    console.log("Seeking to absolute time:", absoluteTime);
+
     // Find which clip this absolute time falls into
     let accumulatedTime = 0;
     for (const clip of timelineClips) {
@@ -84,6 +89,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       if (absoluteTime <= accumulatedTime + clipDuration) {
         // This is the target clip
         const timeInClip = absoluteTime - accumulatedTime;
+        console.log("Switching to clip:", clip.id, "time in clip:", timeInClip);
+        
         setSelectedClip(clip);
         
         if (videoRef.current) {
@@ -151,6 +158,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const jumpToStart = useCallback(() => {
     if (timelineClips.length === 0) return;
     
+    console.log("Jumping to start of timeline");
     const firstClip = timelineClips[0];
     setSelectedClip(firstClip);
     
@@ -197,16 +205,19 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const handleClipEnded = useCallback(() => {
     if (!selectedClip || timelineClips.length === 0) return;
 
+    console.log("Clip ended, transitioning to next clip");
     const currentIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
 
     if (currentIndex >= 0 && currentIndex < timelineClips.length - 1) {
       const nextClip = timelineClips[currentIndex + 1];
+      console.log("Moving to next clip:", nextClip.id);
+      
       setWasPlaying(isPlaying);
       setSelectedClip(nextClip);
       
       // Ensure smooth transition to next clip
       setTimeout(() => {
-        if (videoRef.current && isPlaying) {
+        if (videoRef.current) {
           const nextClipStartTime = nextClip.startTime ?? 0;
           videoRef.current.currentTime = nextClipStartTime;
           setCurrentTime(0);
@@ -215,12 +226,16 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             audioRef.current.currentTime = nextClipStartTime;
           }
           
-          videoRef.current.play().catch(e => console.error("Auto-play next clip failed:", e));
-          audioRef.current?.play().catch(e => console.error("Auto-play next audio failed:", e));
+          // Continue playing if we were playing
+          if (isPlaying) {
+            videoRef.current.play().catch(e => console.error("Auto-play next clip failed:", e));
+            audioRef.current?.play().catch(e => console.error("Auto-play next audio failed:", e));
+          }
         }
-      }, 50);
+      }, 100);
     } else {
       // End of timeline
+      console.log("Reached end of timeline");
       const video = videoRef.current;
       const audio = audioRef.current;
       if (video) video.pause();
