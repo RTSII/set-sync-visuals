@@ -38,42 +38,36 @@ export const useClipTransition = (
         newAbsolutePosition += clipDuration;
       }
       
-      // Store current playing state - different logic for audio vs video master
-      const wasPlaying = isAudioMaster 
-        ? (audioRef.current ? !audioRef.current.paused : false)
-        : (videoRef.current ? !videoRef.current.paused : false);
-      
-      console.log("🔄 CLIP-END: Was playing:", wasPlaying, "isAudioMaster:", isAudioMaster);
-      
       // Update state immediately for UI consistency
       setAbsoluteTimelinePosition(newAbsolutePosition);
       setSelectedClip(nextClip);
       setCurrentTime(0);
       
-      // Handle video transition
+      // Handle video transition - different logic for each mode
       if (videoRef.current) {
         const video = videoRef.current;
         const nextClipStartTime = nextClip.startTime ?? 0;
+        const wasPlaying = !video.paused;
         
-        console.log("🔄 CLIP-END: Preparing video transition to:", nextClip.id);
+        console.log("🔄 CLIP-END: Video was playing:", wasPlaying, "Mode:", isAudioMaster ? "audio-master" : "video-only");
         
         if (video.src !== nextClip.src) {
-          // Different video source - need to change src and maintain playback
+          // Different video source - need to change src
           console.log("🔄 CLIP-END: Changing video source");
           
           const handleCanPlay = () => {
-            console.log("🔄 CLIP-END: New video ready for playback");
+            console.log("🔄 CLIP-END: New video ready");
             
             if (isAudioMaster && audioRef.current) {
               // In audio master mode, sync video to current audio time
               const audioCurrentTime = audioRef.current.currentTime;
               const relativeVideoTime = audioCurrentTime - newAbsolutePosition + nextClipStartTime;
               const targetTime = Math.max(nextClipStartTime, relativeVideoTime);
-              console.log("🔄 CLIP-END: Syncing to audio time:", targetTime);
+              console.log("🔄 CLIP-END: Audio-master mode - syncing video to:", targetTime);
               video.currentTime = targetTime;
             } else {
               // In video-only mode, start from clip beginning
-              console.log("🔄 CLIP-END: Starting from clip beginning");
+              console.log("🔄 CLIP-END: Video-only mode - starting from:", nextClipStartTime);
               video.currentTime = nextClipStartTime;
             }
             
@@ -90,7 +84,7 @@ export const useClipTransition = (
           video.src = nextClip.src;
           video.load();
         } else {
-          // Same video source - just update time and maintain playback
+          // Same video source - just update time
           console.log("🔄 CLIP-END: Same video source, updating position");
           
           if (isAudioMaster && audioRef.current) {

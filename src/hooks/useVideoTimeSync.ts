@@ -26,7 +26,7 @@ export const useVideoTimeSync = (
 
     // Check if we've reached the end of the current clip
     if (videoCurrentTime >= clipEndTime - 0.1) {
-      console.log("🎬 VIDEO-SYNC: Clip ended, needs transition");
+      console.log("🎬 VIDEO-SYNC: Clip ended, triggering transition");
       
       // Find current clip index and move to next
       const currentIndex = timelineClips.findIndex(c => c.id === selectedClip.id);

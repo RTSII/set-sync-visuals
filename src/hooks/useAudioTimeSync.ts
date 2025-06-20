@@ -25,11 +25,17 @@ export const useAudioTimeSync = (
 
     const audioCurrentTime = audioRef.current.currentTime;
     
-    // Prevent excessive syncing during rapid changes
+    // Prevent excessive syncing during rapid changes or transitions
     if (Math.abs(audioCurrentTime - lastSyncTime.current) < 0.1 && !isTransitioning.current) {
       return;
     }
     lastSyncTime.current = audioCurrentTime;
+    
+    // Skip sync during clip transitions to prevent conflicts
+    if (isTransitioning.current) {
+      console.log("🎵 AUDIO-SYNC: Skipping sync during transition");
+      return;
+    }
     
     // Find which clip should be active based on audio time
     let accumulatedTime = 0;
@@ -49,59 +55,65 @@ export const useAudioTimeSync = (
     }
 
     // Only change clips if we've moved to a significantly different position
+    // and it's not due to natural playback progression
     if (targetClip && targetClip.id !== selectedClip?.id) {
-      // Prevent switching during natural transitions
-      if (isTransitioning.current) {
-        console.log("🎵 AUDIO-SYNC: Skipping sync during transition");
-        return;
-      }
-
-      console.log("🎵 AUDIO-SYNC: Auto-selecting clip based on audio time:", targetClip.id);
+      const timeDifference = Math.abs(audioCurrentTime - (selectedClip ? accumulatedTime : 0));
       
-      // Store current audio playing state
-      const wasAudioPlaying = !audioRef.current.paused;
-      
-      setSelectedClip(targetClip);
-      
-      // Sync video to correct position and maintain playback state
-      if (videoRef.current) {
-        const clipStartTime = targetClip.startTime ?? 0;
-        const videoTime = clipStartTime + timeInClip;
+      // Only auto-select if there's a significant time jump (user seeking)
+      if (timeDifference > 1) {
+        console.log("🎵 AUDIO-SYNC: Large time jump detected, auto-selecting clip:", targetClip.id);
         
-        console.log("🎵 AUDIO-SYNC: Setting video time to:", videoTime, "for clip:", targetClip.id);
+        // Store current audio playing state
+        const wasAudioPlaying = !audioRef.current.paused;
         
-        if (videoRef.current.src !== targetClip.src) {
-          // Different video source - handle the transition
-          console.log("🎵 AUDIO-SYNC: Changing video source for auto-select");
+        // Prevent transition conflicts
+        isTransitioning.current = true;
+        
+        setSelectedClip(targetClip);
+        
+        // Sync video to correct position
+        if (videoRef.current) {
+          const clipStartTime = targetClip.startTime ?? 0;
+          const videoTime = clipStartTime + timeInClip;
           
-          const handleCanPlay = () => {
-            console.log("🎵 AUDIO-SYNC: Video ready after source change");
-            videoRef.current!.currentTime = videoTime;
+          console.log("🎵 AUDIO-SYNC: Setting video time to:", videoTime);
+          
+          if (videoRef.current.src !== targetClip.src) {
+            // Different video source
+            const handleCanPlay = () => {
+              videoRef.current!.currentTime = videoTime;
+              
+              if (wasAudioPlaying) {
+                videoRef.current!.play().catch(e => 
+                  console.error("🎵 AUDIO-SYNC: Video play failed:", e)
+                );
+              }
+              
+              videoRef.current!.removeEventListener('canplay', handleCanPlay);
+              
+              // Clear transition flag after video is ready
+              setTimeout(() => {
+                isTransitioning.current = false;
+              }, 100);
+            };
             
-            // Resume video playback if audio is playing
-            if (wasAudioPlaying) {
-              console.log("🎵 AUDIO-SYNC: Resuming video playback after auto-select");
-              videoRef.current!.play().catch(e => 
+            videoRef.current.addEventListener('canplay', handleCanPlay);
+            videoRef.current.src = targetClip.src;
+            videoRef.current.load();
+          } else {
+            // Same video source
+            videoRef.current.currentTime = videoTime;
+            
+            if (wasAudioPlaying && videoRef.current.paused) {
+              videoRef.current.play().catch(e => 
                 console.error("🎵 AUDIO-SYNC: Video play failed:", e)
               );
             }
             
-            videoRef.current!.removeEventListener('canplay', handleCanPlay);
-          };
-          
-          videoRef.current.addEventListener('canplay', handleCanPlay);
-          videoRef.current.src = targetClip.src;
-          videoRef.current.load();
-        } else {
-          // Same video source - just update time
-          videoRef.current.currentTime = videoTime;
-          
-          // Resume playback if audio is playing and video is paused
-          if (wasAudioPlaying && videoRef.current.paused) {
-            console.log("🎵 AUDIO-SYNC: Resuming video playback (same source)");
-            videoRef.current.play().catch(e => 
-              console.error("🎵 AUDIO-SYNC: Video play failed:", e)
-            );
+            // Clear transition flag
+            setTimeout(() => {
+              isTransitioning.current = false;
+            }, 100);
           }
         }
       }
@@ -114,7 +126,7 @@ export const useAudioTimeSync = (
     }
   }, [timelineClips, selectedClip, setSelectedClip, setCurrentTime, setAbsoluteTimelinePosition, isAudioMaster]);
 
-  // Listen to audio timeupdate events to drive the timeline (only in audio master mode)
+  // Listen to audio timeupdate events (only in audio master mode)
   useEffect(() => {
     if (!isAudioMaster) return;
     
@@ -125,7 +137,7 @@ export const useAudioTimeSync = (
       syncToAudioTime();
     };
 
-    // Set transition flag when audio starts playing to prevent conflicts
+    // Set transition flag when audio starts playing
     const handleAudioPlay = () => {
       isTransitioning.current = true;
       setTimeout(() => {
@@ -133,12 +145,19 @@ export const useAudioTimeSync = (
       }, 500);
     };
 
+    // Handle natural clip transitions during audio playback
+    const handleAudioSeek = () => {
+      isTransitioning.current = false; // Allow immediate sync on user seeking
+    };
+
     audio.addEventListener('timeupdate', handleAudioTimeUpdate);
     audio.addEventListener('play', handleAudioPlay);
+    audio.addEventListener('seeked', handleAudioSeek);
     
     return () => {
       audio.removeEventListener('timeupdate', handleAudioTimeUpdate);
       audio.removeEventListener('play', handleAudioPlay);
+      audio.removeEventListener('seeked', handleAudioSeek);
     };
   }, [syncToAudioTime, isAudioMaster]);
 
