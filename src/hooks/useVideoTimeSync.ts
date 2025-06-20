@@ -26,7 +26,7 @@ export const useVideoTimeSync = (
 
     // Check if we've reached the end of the current clip
     if (videoCurrentTime >= clipEndTime - 0.1) {
-      console.log("🎬 VIDEO-SYNC: Clip ended, triggering transition");
+      console.log("🎬 VIDEO-SYNC: Clip ended, transitioning to next clip");
       
       // Find current clip index and move to next
       const currentIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
@@ -50,13 +50,10 @@ export const useVideoTimeSync = (
         // Set video to next clip and continue playing
         const wasPlaying = !video.paused;
         if (video.src !== nextClip.src) {
-          console.log("🎬 VIDEO-SYNC: Changing video source");
-          
           const handleCanPlay = () => {
             const nextClipStartTime = nextClip.startTime ?? 0;
             video.currentTime = nextClipStartTime;
             if (wasPlaying) {
-              console.log("🎬 VIDEO-SYNC: Continuing playback on new clip");
               video.play().catch(e => 
                 console.error("🎬 VIDEO-SYNC: Failed to continue playback:", e)
               );
