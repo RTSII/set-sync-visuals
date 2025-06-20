@@ -1,22 +1,21 @@
 
+import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Pause, Play, Rewind, FastForward, Expand } from "lucide-react";
+import { Play, Pause, Rewind, FastForward, Expand } from "lucide-react";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useEditor } from "@/context/EditorContext";
 import { useEditorStore } from "@/lib/store";
-import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import React from 'react';
 import { toast } from "sonner";
 
 const VideoPreview = () => {
-  console.log("🎬 VideoPreview: Component rendering");
-  
+  const previewContainerRef = React.useRef<HTMLDivElement>(null);
   const {
     videoRef,
     togglePlay,
     jumpToStart,
     jumpToEnd,
     handleClipEnded,
-    seekToTime,
+    seekToTime
   } = useEditor();
 
   const {
@@ -26,56 +25,51 @@ const VideoPreview = () => {
     setCurrentTime,
     updateClip,
     timelineClips,
+    absoluteTimelinePosition,
+    setAbsoluteTimelinePosition,
     isAudioMaster
   } = useEditorStore();
 
-  console.log("🎬 VideoPreview: selectedClip:", selectedClip?.id, "isPlaying:", isPlaying, "currentTime:", currentTime);
-
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
-  const previewContainerRef = React.useRef<HTMLDivElement>(null);
+  const isTransitioning = React.useRef(false);
+  const transitionTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
 
-  // Simplified time update handler
-  const handleTimeUpdate = React.useCallback(() => {
-    console.log("🎬 VideoPreview: handleTimeUpdate called, isAudioMaster:", isAudioMaster);
-    
-    if (isAudioMaster || !videoRef.current || !selectedClip) {
-      console.log("🎬 VideoPreview: Skipping time update - audio master mode or no video/clip");
-      return;
+  const handleTimeUpdate = () => {
+    if (videoRef.current && selectedClip && !isTransitioning.current) {
+      const videoCurrentTime = videoRef.current.currentTime;
+      const clipStartTime = selectedClip.startTime ?? 0;
+      const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
+
+      if (clipEndTime && videoCurrentTime >= clipEndTime - 0.02) {
+        console.log("🎬 TIME-UPDATE: Clip reached end, triggering seamless transition");
+        isTransitioning.current = true;
+        
+        if (transitionTimeoutRef.current) {
+          clearTimeout(transitionTimeoutRef.current);
+        }
+        
+        handleClipEnded();
+        
+        transitionTimeoutRef.current = setTimeout(() => {
+          isTransitioning.current = false;
+        }, 500);
+      } else {
+        const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
+        setCurrentTime(relativeTime);
+      }
     }
+  };
 
-    const videoCurrentTime = videoRef.current.currentTime;
-    const clipStartTime = selectedClip.startTime ?? 0;
-    const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
-    const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
-    
-    console.log("🎬 VideoPreview: Time update - video time:", videoCurrentTime, "relative time:", relativeTime);
-    setCurrentTime(relativeTime);
-
-    // Check for clip ending
-    if (clipEndTime && videoCurrentTime >= (clipEndTime - 0.1)) {
-      console.log("🎬 VideoPreview: Clip ending detected");
-      handleClipEnded();
-    }
-  }, [isAudioMaster, selectedClip, setCurrentTime, handleClipEnded]);
-
-  const handleVideoEnded = React.useCallback(() => {
-    console.log("🎬 VideoPreview: Video ended, isAudioMaster:", isAudioMaster);
-    if (!isAudioMaster) {
-      handleClipEnded();
-    }
-  }, [isAudioMaster, handleClipEnded]);
-
-  const handleLoadedMetadata = React.useCallback(() => {
-    console.log("🎬 VideoPreview: Video metadata loaded");
+  const handleLoadedMetadata = () => {
     if (videoRef.current && selectedClip) {
       const videoDuration = videoRef.current.duration || 0;
-      console.log("🎬 VideoPreview: Video duration:", videoDuration);
+      console.log("🎬 METADATA: Video loaded for clip:", selectedClip.id, "duration:", videoDuration);
 
       if (!selectedClip.originalDuration || selectedClip.originalDuration === 0) {
-        console.log("🎬 VideoPreview: Setting initial clip duration");
+        console.log("🎬 METADATA: Updating clip with video duration");
         updateClip(selectedClip.id, {
           startTime: 0,
           endTime: videoDuration,
@@ -90,10 +84,45 @@ const VideoPreview = () => {
         videoRef.current.currentTime = clipStartTime;
         setClipDisplayDuration(clipDuration || videoDuration);
         setCurrentTime(0);
-        console.log("🎬 VideoPreview: Set clip duration:", clipDuration);
       }
     }
-  }, [selectedClip, updateClip, setCurrentTime]);
+  };
+
+  const handleVideoEnded = () => {
+    console.log("🎬 VIDEO-END: Video element ended event");
+    if (!isTransitioning.current) {
+      handleClipEnded();
+    }
+  };
+
+  // Enhanced clip change handler
+  React.useEffect(() => {
+    if (videoRef.current && selectedClip) {
+      const clipStartTime = selectedClip.startTime ?? 0;
+      const clipEndTime = selectedClip.endTime ?? selectedClip.originalDuration;
+      const clipDuration = (clipEndTime || 0) - clipStartTime;
+
+      console.log("🎬 CLIP-CHANGE: Selected clip changed to:", selectedClip.id);
+      console.log("🎬 CLIP-CHANGE: Clip start time:", clipStartTime, "duration:", clipDuration);
+      
+      setClipDisplayDuration(clipDuration > 0 ? clipDuration : (videoRef.current.duration || 8));
+      setCurrentTime(0);
+
+      if (!isTransitioning.current) {
+        console.log("🎬 CLIP-CHANGE: Setting video time to clip start:", clipStartTime);
+        videoRef.current.currentTime = clipStartTime;
+      }
+    }
+  }, [selectedClip?.id, selectedClip?.startTime, selectedClip?.endTime, setCurrentTime]);
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!selectedClip || clipDisplayDuration === 0) return;
@@ -103,40 +132,9 @@ const VideoPreview = () => {
     const progress = clickX / rect.width;
     const newTime = progress * clipDisplayDuration;
     
-    console.log("🎬 VideoPreview: Progress bar clicked, seeking to:", newTime);
+    console.log("🎬 PROGRESS-CLICK: Seeking to time:", newTime);
     seekToTime(newTime);
   };
-
-  // Handle clip changes
-  React.useEffect(() => {
-    console.log("🎬 VideoPreview: Clip change effect triggered, selectedClip:", selectedClip?.id);
-    
-    if (!videoRef.current || !selectedClip) {
-      console.log("🎬 VideoPreview: No video ref or selected clip");
-      return;
-    }
-
-    const video = videoRef.current;
-    const clipStartTime = selectedClip.startTime ?? 0;
-    const clipEndTime = selectedClip.endTime ?? selectedClip.originalDuration;
-    const clipDuration = (clipEndTime || 0) - clipStartTime;
-
-    console.log("🎬 VideoPreview: Setting up clip - start:", clipStartTime, "end:", clipEndTime, "duration:", clipDuration);
-
-    // Set display duration
-    setClipDisplayDuration(clipDuration > 0 ? clipDuration : (video.duration || 8));
-    setCurrentTime(0);
-
-    // Handle video source changes
-    if (video.src !== selectedClip.src) {
-      console.log("🎬 VideoPreview: Changing video source from", video.src, "to", selectedClip.src);
-      video.src = selectedClip.src;
-      video.load();
-    } else {
-      console.log("🎬 VideoPreview: Same source, just updating time");
-      video.currentTime = clipStartTime;
-    }
-  }, [selectedClip?.id, selectedClip?.src, setCurrentTime]);
 
   const toggleFullScreen = () => {
     const elem = previewContainerRef.current;
@@ -160,16 +158,11 @@ const VideoPreview = () => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   };
 
-  const progressPercentage = clipDisplayDuration > 0 ? Math.min(100, (currentTime / clipDisplayDuration) * 100) : 0;
-
   const currentClipIndex = selectedClip ? timelineClips.findIndex(c => c.id === selectedClip.id) + 1 : 0;
   const totalClips = timelineClips.length;
-
-  // Determine play state
-  const videoIsPlaying = videoRef.current ? !videoRef.current.paused && !videoRef.current.ended : false;
-  const shouldShowPlayButton = !videoIsPlaying;
-
-  console.log("🎬 VideoPreview: Render state - videoIsPlaying:", videoIsPlaying, "shouldShowPlayButton:", shouldShowPlayButton);
+  const videoIsPlaying = videoRef.current ? !videoRef.current.paused : false;
+  const shouldShowPlayButton = !videoIsPlaying && !isTransitioning.current;
+  const progressPercentage = clipDisplayDuration > 0 ? Math.min(100, (currentTime / clipDisplayDuration) * 100) : 0;
 
   return (
     <div ref={previewContainerRef} className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
@@ -210,7 +203,7 @@ const VideoPreview = () => {
             />
             <div className="text-center text-muted-foreground">
               <p className="text-lg font-medium">Select a clip to preview</p>
-              <p className="text-sm">Use Space to play/pause, J/L for -10s/+10s, ←/→ for -5s/+5s</p>
+              <p className="text-sm">Use Space to play/pause, J/L for -10s/+5s, ←/→ for -5s/+5s</p>
             </div>
           </div>
         )}
@@ -236,7 +229,9 @@ const VideoPreview = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground font-mono">{formatTime(currentTime)} / {formatTime(clipDisplayDuration)}</span>
+          <span className="text-xs text-muted-foreground font-mono">
+            {formatTime(currentTime)} / {formatTime(clipDisplayDuration)}
+          </span>
           {totalClips > 0 && (
             <span className="text-xs text-muted-foreground">({currentClipIndex}/{totalClips})</span>
           )}
