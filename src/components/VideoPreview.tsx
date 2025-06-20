@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
@@ -42,15 +41,19 @@ const VideoPreview = () => {
 
       console.log("🎬 VIDEO-PREVIEW: Time update - current:", videoCurrentTime, "end:", clipEndTime, "audio master:", isAudioMaster);
 
-      // In video-only mode, check for clip ending and handle transition
-      if (!isAudioMaster && clipEndTime && videoCurrentTime >= clipEndTime - 0.1) {
-        console.log("🎬 VIDEO-PREVIEW: Clip reached end in video-only mode, triggering transition");
-        handleClipEnded();
-      } else if (!isAudioMaster) {
-        // Only update time in video-only mode (audio mode is handled by useAudioTimeSync)
+      // In video-only mode, update time and check for clip ending
+      if (!isAudioMaster) {
         const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
         setCurrentTime(relativeTime);
+
+        // Check for clip ending and handle transition
+        if (clipEndTime && videoCurrentTime >= clipEndTime - 0.1) {
+          console.log("🎬 VIDEO-PREVIEW: Clip reached end in video-only mode, triggering transition");
+          handleClipEnded();
+        }
       }
+      // In audio-master mode, let the audio sync handle time updates
+      // but still check for manual video seeking
     }
   };
 
@@ -83,8 +86,13 @@ const VideoPreview = () => {
 
   const handleVideoEnded = () => {
     console.log("🎬 VIDEO-END: Video element ended event - audio master:", isAudioMaster);
-    // Handle clip transition for both modes
-    handleClipEnded();
+    
+    // In video-only mode, handle the transition
+    if (!isAudioMaster) {
+      handleClipEnded();
+    }
+    // In audio-master mode, the audio sync should handle transitions automatically
+    // but we might need to sync the video if it gets out of sync
   };
 
   const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {

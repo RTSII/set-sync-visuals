@@ -40,7 +40,7 @@ export const useAudioTimeSync = (
     }
 
     if (targetClip && targetClip.id !== selectedClip?.id) {
-      console.log("🎵 AUDIO-SYNC: Auto-selecting clip based on audio time:", targetClip.id);
+      console.log("🎵 AUDIO-SYNC: Auto-selecting clip based on audio time:", targetClip.id, "time in clip:", timeInClip);
       
       // Store current audio playing state
       const wasAudioPlaying = !audioRef.current.paused;
@@ -60,17 +60,21 @@ export const useAudioTimeSync = (
           
           const handleCanPlay = () => {
             console.log("🎵 AUDIO-SYNC: Video ready after source change");
-            videoRef.current!.currentTime = videoTime;
-            
-            // CRITICAL: Resume video playback if audio is playing
-            if (wasAudioPlaying) {
-              console.log("🎵 AUDIO-SYNC: Resuming video playback after auto-select");
-              videoRef.current!.play().catch(e => 
-                console.error("🎵 AUDIO-SYNC: Video play failed:", e)
-              );
+            if (videoRef.current) {
+              videoRef.current.currentTime = videoTime;
+              
+              // CRITICAL: Resume video playback if audio is playing
+              if (wasAudioPlaying && audioRef.current && !audioRef.current.paused) {
+                console.log("🎵 AUDIO-SYNC: Resuming video playback after auto-select");
+                videoRef.current.play().catch(e => 
+                  console.error("🎵 AUDIO-SYNC: Video play failed:", e)
+                );
+              }
             }
             
-            videoRef.current!.removeEventListener('canplay', handleCanPlay);
+            if (videoRef.current) {
+              videoRef.current.removeEventListener('canplay', handleCanPlay);
+            }
           };
           
           videoRef.current.addEventListener('canplay', handleCanPlay);
@@ -81,7 +85,7 @@ export const useAudioTimeSync = (
           videoRef.current.currentTime = videoTime;
           
           // Resume playback if audio is playing and video is paused
-          if (wasAudioPlaying && videoRef.current.paused) {
+          if (wasAudioPlaying && !audioRef.current.paused && videoRef.current.paused) {
             console.log("🎵 AUDIO-SYNC: Resuming video playback (same source)");
             videoRef.current.play().catch(e => 
               console.error("🎵 AUDIO-SYNC: Video play failed:", e)
@@ -105,6 +109,8 @@ export const useAudioTimeSync = (
     const audio = audioRef.current;
     if (!audio) return;
 
+    console.log("🎵 AUDIO-SYNC: Setting up audio timeupdate listener for audio-master mode");
+
     const handleAudioTimeUpdate = () => {
       syncToAudioTime();
     };
@@ -112,6 +118,7 @@ export const useAudioTimeSync = (
     audio.addEventListener('timeupdate', handleAudioTimeUpdate);
     
     return () => {
+      console.log("🎵 AUDIO-SYNC: Cleaning up audio timeupdate listener");
       audio.removeEventListener('timeupdate', handleAudioTimeUpdate);
     };
   }, [syncToAudioTime, isAudioMaster]);
