@@ -7,15 +7,12 @@ export const useVideoTimeSync = (
 ) => {
   const {
     selectedClip,
-    timelineClips,
     setCurrentTime,
-    setAbsoluteTimelinePosition,
     isAudioMaster
   } = useEditorStore();
 
-  // Handle video-only timeline position tracking (NOT transitions)
+  // Simple video time sync - only in video-only mode
   const syncVideoTime = useCallback(() => {
-    // CRITICAL FIX: Only run in video-only mode and ensure we have necessary elements
     if (isAudioMaster || !videoRef.current || !selectedClip) {
       return;
     }
@@ -23,61 +20,24 @@ export const useVideoTimeSync = (
     const video = videoRef.current;
     const videoCurrentTime = video.currentTime;
     const clipStartTime = selectedClip.startTime ?? 0;
-
-    // Skip if video is not ready
-    if (video.readyState < 2) {
-      console.log("🎬 VIDEO-SYNC: Video not ready, skipping sync");
-      return;
-    }
-
-    console.log("🎬 VIDEO-SYNC: Updating position - video time:", videoCurrentTime, "clip start:", clipStartTime);
-
-    // Update relative time within the clip
     const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
+    
     setCurrentTime(relativeTime);
+  }, [selectedClip, setCurrentTime, isAudioMaster]);
 
-    // Calculate absolute position in timeline
-    const currentClipIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
-    if (currentClipIndex >= 0) {
-      let accumulatedTime = 0;
-      for (let i = 0; i < currentClipIndex; i++) {
-        const clip = timelineClips[i];
-        const clipDuration = (clip.endTime ?? clip.originalDuration ?? 0) - (clip.startTime ?? 0);
-        accumulatedTime += clipDuration;
-      }
-      const absoluteTime = accumulatedTime + relativeTime;
-      setAbsoluteTimelinePosition(absoluteTime);
-    }
-  }, [selectedClip, timelineClips, setCurrentTime, setAbsoluteTimelinePosition, isAudioMaster]);
-
-  // Listen to video timeupdate events (only in video-only mode)
+  // Simple timeupdate listener - only in video-only mode
   useEffect(() => {
-    // CRITICAL FIX: Early return if in audio master mode
-    if (isAudioMaster) {
-      console.log("🎬 VIDEO-SYNC: Skipping video sync setup - audio master mode active");
+    if (isAudioMaster || !videoRef.current) {
       return;
     }
     
     const video = videoRef.current;
-    if (!video) {
-      console.log("🎬 VIDEO-SYNC: No video element available");
-      return;
-    }
-
-    console.log("🎬 VIDEO-SYNC: Setting up timeupdate listener for video-only mode");
-
-    const handleVideoTimeUpdate = () => {
-      syncVideoTime();
-    };
-
-    // CRITICAL FIX: Add listener with proper cleanup
-    video.addEventListener('timeupdate', handleVideoTimeUpdate);
+    video.addEventListener('timeupdate', syncVideoTime);
     
     return () => {
-      console.log("🎬 VIDEO-SYNC: Cleaning up timeupdate listener");
-      video.removeEventListener('timeupdate', handleVideoTimeUpdate);
+      video.removeEventListener('timeupdate', syncVideoTime);
     };
-  }, [syncVideoTime, isAudioMaster, selectedClip?.id]); // Added selectedClip dependency for proper reinitialization
+  }, [syncVideoTime, isAudioMaster]);
 
   return {
     syncVideoTime

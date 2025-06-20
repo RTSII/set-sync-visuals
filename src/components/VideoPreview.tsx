@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
@@ -23,48 +24,37 @@ const VideoPreview = () => {
     setCurrentTime,
     updateClip,
     timelineClips,
-    absoluteTimelinePosition,
     isAudioMaster
   } = useEditorStore();
 
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
   const previewContainerRef = React.useRef<HTMLDivElement>(null);
-  const timeUpdateRef = React.useRef<number>(0);
 
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
 
   const handleTimeUpdate = () => {
-    if (videoRef.current && selectedClip) {
-      const videoCurrentTime = videoRef.current.currentTime;
-      const clipStartTime = selectedClip.startTime ?? 0;
-      const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
+    if (!videoRef.current || !selectedClip) return;
 
-      console.log("🎬 VIDEO-PREVIEW: Time update - current:", videoCurrentTime, "end:", clipEndTime, "audio master:", isAudioMaster);
+    const videoCurrentTime = videoRef.current.currentTime;
+    const clipStartTime = selectedClip.startTime ?? 0;
+    const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
 
-      // CRITICAL FIX: Only handle timing in video-only mode
-      if (!isAudioMaster) {
-        const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
-        setCurrentTime(relativeTime);
+    // Only update time in video-only mode
+    if (!isAudioMaster) {
+      const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
+      setCurrentTime(relativeTime);
 
-        // Check for clip ending - use a small buffer to prevent edge cases
-        if (clipEndTime && videoCurrentTime >= (clipEndTime - 0.1)) {
-          console.log("🎬 VIDEO-PREVIEW: Clip reached end in video-only mode, triggering transition");
-          // Use a small delay to prevent race conditions
-          setTimeout(() => {
-            handleClipEnded();
-          }, 50);
-        }
+      // Check for clip ending
+      if (clipEndTime && videoCurrentTime >= (clipEndTime - 0.1)) {
+        handleClipEnded();
       }
     }
   };
 
   const handleVideoEnded = () => {
-    console.log("🎬 VIDEO-END: Video element ended event - audio master:", isAudioMaster);
-    
-    // CRITICAL FIX: Always handle video ended in video-only mode
+    // Always handle video ended in video-only mode
     if (!isAudioMaster) {
-      console.log("🎬 VIDEO-END: Handling clip transition in video-only mode");
       handleClipEnded();
     }
   };
@@ -72,11 +62,9 @@ const VideoPreview = () => {
   const handleLoadedMetadata = () => {
     if (videoRef.current && selectedClip) {
       const videoDuration = videoRef.current.duration || 0;
-      console.log("🎬 METADATA: Video loaded for clip:", selectedClip.id, "duration:", videoDuration);
 
       // Update clip metadata if needed
       if (!selectedClip.originalDuration || selectedClip.originalDuration === 0) {
-        console.log("🎬 METADATA: Updating clip with video duration");
         updateClip(selectedClip.id, {
           startTime: 0,
           endTime: videoDuration,
@@ -104,34 +92,29 @@ const VideoPreview = () => {
     const progress = clickX / rect.width;
     const newTime = progress * clipDisplayDuration;
     
-    console.log("🎬 PROGRESS-CLICK: Seeking to time:", newTime);
     seekToTime(newTime);
   };
 
-  // Handle clip changes with better state management
+  // Handle clip changes
   React.useEffect(() => {
     if (videoRef.current && selectedClip) {
       const clipStartTime = selectedClip.startTime ?? 0;
       const clipEndTime = selectedClip.endTime ?? selectedClip.originalDuration;
       const clipDuration = (clipEndTime || 0) - clipStartTime;
 
-      console.log("🎬 CLIP-CHANGE: Selected clip changed to:", selectedClip.id, "audio master:", isAudioMaster);
-      
       setClipDisplayDuration(clipDuration > 0 ? clipDuration : (videoRef.current.duration || 8));
       setCurrentTime(0);
 
-      // CRITICAL FIX: Always set video time to clip start, regardless of mode
-      console.log("🎬 CLIP-CHANGE: Setting video time to clip start:", clipStartTime);
+      // Set video time to clip start
       videoRef.current.currentTime = clipStartTime;
       
-      // CRITICAL FIX: Ensure video source is correct
+      // Update video source if needed
       if (videoRef.current.src !== selectedClip.src) {
-        console.log("🎬 CLIP-CHANGE: Updating video source to:", selectedClip.src);
         videoRef.current.src = selectedClip.src;
         videoRef.current.load();
       }
     }
-  }, [selectedClip?.id, selectedClip?.startTime, selectedClip?.endTime, setCurrentTime, isAudioMaster]);
+  }, [selectedClip?.id, setCurrentTime]);
 
   const toggleFullScreen = () => {
     const elem = previewContainerRef.current;
@@ -160,8 +143,8 @@ const VideoPreview = () => {
   const currentClipIndex = selectedClip ? timelineClips.findIndex(c => c.id === selectedClip.id) + 1 : 0;
   const totalClips = timelineClips.length;
 
-  // CRITICAL FIX: More reliable video playing state detection
-  const videoIsPlaying = videoRef.current ? (!videoRef.current.paused && !videoRef.current.ended && videoRef.current.readyState > 2) : false;
+  // Simple video playing state detection
+  const videoIsPlaying = videoRef.current ? !videoRef.current.paused && !videoRef.current.ended : false;
 
   return (
     <div ref={previewContainerRef} className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
