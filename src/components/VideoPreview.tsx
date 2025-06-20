@@ -29,6 +29,7 @@ const VideoPreview = () => {
 
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
   const previewContainerRef = React.useRef<HTMLDivElement>(null);
+  const timeUpdateRef = React.useRef<number>(0);
 
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
@@ -41,19 +42,30 @@ const VideoPreview = () => {
 
       console.log("🎬 VIDEO-PREVIEW: Time update - current:", videoCurrentTime, "end:", clipEndTime, "audio master:", isAudioMaster);
 
-      // In video-only mode, update time and check for clip ending
+      // CRITICAL FIX: Only handle timing in video-only mode
       if (!isAudioMaster) {
         const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
         setCurrentTime(relativeTime);
 
-        // Check for clip ending and handle transition
-        if (clipEndTime && videoCurrentTime >= clipEndTime - 0.1) {
+        // Check for clip ending - use a small buffer to prevent edge cases
+        if (clipEndTime && videoCurrentTime >= (clipEndTime - 0.1)) {
           console.log("🎬 VIDEO-PREVIEW: Clip reached end in video-only mode, triggering transition");
-          handleClipEnded();
+          // Use a small delay to prevent race conditions
+          setTimeout(() => {
+            handleClipEnded();
+          }, 50);
         }
       }
-      // In audio-master mode, let the audio sync handle time updates
-      // but still check for manual video seeking
+    }
+  };
+
+  const handleVideoEnded = () => {
+    console.log("🎬 VIDEO-END: Video element ended event - audio master:", isAudioMaster);
+    
+    // CRITICAL FIX: Always handle video ended in video-only mode
+    if (!isAudioMaster) {
+      console.log("🎬 VIDEO-END: Handling clip transition in video-only mode");
+      handleClipEnded();
     }
   };
 
@@ -84,17 +96,6 @@ const VideoPreview = () => {
     }
   };
 
-  const handleVideoEnded = () => {
-    console.log("🎬 VIDEO-END: Video element ended event - audio master:", isAudioMaster);
-    
-    // In video-only mode, handle the transition
-    if (!isAudioMaster) {
-      handleClipEnded();
-    }
-    // In audio-master mode, the audio sync should handle transitions automatically
-    // but we might need to sync the video if it gets out of sync
-  };
-
   const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!selectedClip || clipDisplayDuration === 0) return;
     
@@ -107,7 +108,7 @@ const VideoPreview = () => {
     seekToTime(newTime);
   };
 
-  // Handle clip changes
+  // Handle clip changes with better state management
   React.useEffect(() => {
     if (videoRef.current && selectedClip) {
       const clipStartTime = selectedClip.startTime ?? 0;
@@ -119,9 +120,16 @@ const VideoPreview = () => {
       setClipDisplayDuration(clipDuration > 0 ? clipDuration : (videoRef.current.duration || 8));
       setCurrentTime(0);
 
-      // Set video time to clip start
+      // CRITICAL FIX: Always set video time to clip start, regardless of mode
       console.log("🎬 CLIP-CHANGE: Setting video time to clip start:", clipStartTime);
       videoRef.current.currentTime = clipStartTime;
+      
+      // CRITICAL FIX: Ensure video source is correct
+      if (videoRef.current.src !== selectedClip.src) {
+        console.log("🎬 CLIP-CHANGE: Updating video source to:", selectedClip.src);
+        videoRef.current.src = selectedClip.src;
+        videoRef.current.load();
+      }
     }
   }, [selectedClip?.id, selectedClip?.startTime, selectedClip?.endTime, setCurrentTime, isAudioMaster]);
 
@@ -152,8 +160,8 @@ const VideoPreview = () => {
   const currentClipIndex = selectedClip ? timelineClips.findIndex(c => c.id === selectedClip.id) + 1 : 0;
   const totalClips = timelineClips.length;
 
-  // Determine if video is actually playing
-  const videoIsPlaying = videoRef.current ? !videoRef.current.paused : false;
+  // CRITICAL FIX: More reliable video playing state detection
+  const videoIsPlaying = videoRef.current ? (!videoRef.current.paused && !videoRef.current.ended && videoRef.current.readyState > 2) : false;
 
   return (
     <div ref={previewContainerRef} className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
