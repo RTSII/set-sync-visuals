@@ -40,12 +40,14 @@ const VideoPreview = () => {
       const clipStartTime = selectedClip.startTime ?? 0;
       const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
 
-      // Check if we've reached the end of the current clip
-      if (clipEndTime && videoCurrentTime >= clipEndTime - 0.1) {
-        console.log("🎬 TIME-UPDATE: Clip reached end, triggering transition");
+      console.log("🎬 VIDEO-PREVIEW: Time update - current:", videoCurrentTime, "end:", clipEndTime, "audio master:", isAudioMaster);
+
+      // In video-only mode, check for clip ending and handle transition
+      if (!isAudioMaster && clipEndTime && videoCurrentTime >= clipEndTime - 0.1) {
+        console.log("🎬 VIDEO-PREVIEW: Clip reached end in video-only mode, triggering transition");
         handleClipEnded();
-      } else {
-        // Update relative time within the clip
+      } else if (!isAudioMaster) {
+        // Only update time in video-only mode (audio mode is handled by useAudioTimeSync)
         const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
         setCurrentTime(relativeTime);
       }
@@ -80,7 +82,8 @@ const VideoPreview = () => {
   };
 
   const handleVideoEnded = () => {
-    console.log("🎬 VIDEO-END: Video element ended event");
+    console.log("🎬 VIDEO-END: Video element ended event - audio master:", isAudioMaster);
+    // Handle clip transition for both modes
     handleClipEnded();
   };
 
@@ -103,7 +106,7 @@ const VideoPreview = () => {
       const clipEndTime = selectedClip.endTime ?? selectedClip.originalDuration;
       const clipDuration = (clipEndTime || 0) - clipStartTime;
 
-      console.log("🎬 CLIP-CHANGE: Selected clip changed to:", selectedClip.id);
+      console.log("🎬 CLIP-CHANGE: Selected clip changed to:", selectedClip.id, "audio master:", isAudioMaster);
       
       setClipDisplayDuration(clipDuration > 0 ? clipDuration : (videoRef.current.duration || 8));
       setCurrentTime(0);
@@ -112,7 +115,7 @@ const VideoPreview = () => {
       console.log("🎬 CLIP-CHANGE: Setting video time to clip start:", clipStartTime);
       videoRef.current.currentTime = clipStartTime;
     }
-  }, [selectedClip?.id, selectedClip?.startTime, selectedClip?.endTime, setCurrentTime]);
+  }, [selectedClip?.id, selectedClip?.startTime, selectedClip?.endTime, setCurrentTime, isAudioMaster]);
 
   const toggleFullScreen = () => {
     const elem = previewContainerRef.current;
