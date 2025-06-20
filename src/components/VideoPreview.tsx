@@ -34,8 +34,8 @@ const VideoPreview = () => {
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
 
-  // Simplified time update - only for video-only mode
-  const handleTimeUpdate = () => {
+  // Consolidated time update handler - only for video-only mode
+  const handleTimeUpdate = React.useCallback(() => {
     if (isAudioMaster || !videoRef.current || !selectedClip) return;
 
     const videoCurrentTime = videoRef.current.currentTime;
@@ -49,15 +49,15 @@ const VideoPreview = () => {
     if (clipEndTime && videoCurrentTime >= (clipEndTime - 0.1)) {
       handleClipEnded();
     }
-  };
+  }, [isAudioMaster, selectedClip, setCurrentTime, handleClipEnded]);
 
-  const handleVideoEnded = () => {
+  const handleVideoEnded = React.useCallback(() => {
     if (!isAudioMaster) {
       handleClipEnded();
     }
-  };
+  }, [isAudioMaster, handleClipEnded]);
 
-  const handleLoadedMetadata = () => {
+  const handleLoadedMetadata = React.useCallback(() => {
     if (videoRef.current && selectedClip) {
       const videoDuration = videoRef.current.duration || 0;
 
@@ -78,13 +78,13 @@ const VideoPreview = () => {
         setCurrentTime(0);
       }
     }
-  };
+  }, [selectedClip, updateClip, setCurrentTime]);
 
-  // Clear transition state when video is ready
-  const handleCanPlay = () => {
-    console.log("🎬 VIDEO: Can play - clearing transition state");
+  // Clear transition state when video is ready - simplified
+  const handleCanPlay = React.useCallback(() => {
+    console.log("🎬 VIDEO: Video ready - clearing transition state");
     setIsVideoTransitioning(false);
-  };
+  }, []);
 
   const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!selectedClip || clipDisplayDuration === 0) return;
@@ -97,38 +97,33 @@ const VideoPreview = () => {
     seekToTime(newTime);
   };
 
-  // Handle clip changes with proper transition management
+  // Simplified clip change handler - single responsibility
   React.useEffect(() => {
-    if (videoRef.current && selectedClip) {
-      const clipStartTime = selectedClip.startTime ?? 0;
-      const clipEndTime = selectedClip.endTime ?? selectedClip.originalDuration;
-      const clipDuration = (clipEndTime || 0) - clipStartTime;
+    if (!videoRef.current || !selectedClip) return;
 
-      setClipDisplayDuration(clipDuration > 0 ? clipDuration : (videoRef.current.duration || 8));
-      setCurrentTime(0);
+    const video = videoRef.current;
+    const clipStartTime = selectedClip.startTime ?? 0;
+    const clipEndTime = selectedClip.endTime ?? selectedClip.originalDuration;
+    const clipDuration = (clipEndTime || 0) - clipStartTime;
 
-      // Handle video source changes
-      if (videoRef.current.src !== selectedClip.src) {
-        console.log("🎬 VIDEO: Starting transition to new clip");
-        setIsVideoTransitioning(true);
-        
-        // Set up one-time event listener for when video is ready
-        const handleVideoReady = () => {
-          if (videoRef.current) {
-            videoRef.current.currentTime = clipStartTime;
-            videoRef.current.removeEventListener('canplay', handleVideoReady);
-          }
-        };
-        
-        videoRef.current.addEventListener('canplay', handleVideoReady);
-        videoRef.current.src = selectedClip.src;
-        videoRef.current.load();
-      } else {
-        // Same source, just update time
-        videoRef.current.currentTime = clipStartTime;
-      }
+    console.log("🎬 VIDEO: Clip changed to:", selectedClip.id);
+
+    // Set display duration
+    setClipDisplayDuration(clipDuration > 0 ? clipDuration : (video.duration || 8));
+    setCurrentTime(0);
+
+    // Handle video source changes
+    if (video.src !== selectedClip.src) {
+      console.log("🎬 VIDEO: Source changing - setting transition state");
+      setIsVideoTransitioning(true);
+      
+      video.src = selectedClip.src;
+      video.load();
+    } else {
+      // Same source, just update time
+      video.currentTime = clipStartTime;
     }
-  }, [selectedClip?.id, setCurrentTime]);
+  }, [selectedClip?.id, selectedClip?.src, setCurrentTime]);
 
   const toggleFullScreen = () => {
     const elem = previewContainerRef.current;
@@ -157,10 +152,8 @@ const VideoPreview = () => {
   const currentClipIndex = selectedClip ? timelineClips.findIndex(c => c.id === selectedClip.id) + 1 : 0;
   const totalClips = timelineClips.length;
 
-  // Determine if video is actually playing
+  // Simplified play state determination
   const videoIsPlaying = videoRef.current ? !videoRef.current.paused && !videoRef.current.ended : false;
-  
-  // Show play button only when video is not playing AND not transitioning
   const shouldShowPlayButton = !videoIsPlaying && !isVideoTransitioning;
 
   return (
@@ -181,7 +174,7 @@ const VideoPreview = () => {
               playsInline
               muted={false}
             />
-            {/* Play button overlay - only show when appropriate */}
+            {/* Simplified play button overlay */}
             {shouldShowPlayButton && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <Button
