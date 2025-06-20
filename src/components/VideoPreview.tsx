@@ -28,6 +28,7 @@ const VideoPreview = () => {
   } = useEditorStore();
 
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
+  const [isTransitioning, setIsTransitioning] = React.useState(false);
   const previewContainerRef = React.useRef<HTMLDivElement>(null);
 
   // Enable keyboard shortcuts
@@ -82,6 +83,9 @@ const VideoPreview = () => {
         setCurrentTime(0);
       }
     }
+    
+    // Clear transition state when video loads
+    setIsTransitioning(false);
   };
 
   const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -110,6 +114,7 @@ const VideoPreview = () => {
       
       // Update video source if needed
       if (videoRef.current.src !== selectedClip.src) {
+        setIsTransitioning(true); // Set transition state
         videoRef.current.src = selectedClip.src;
         videoRef.current.load();
       }
@@ -145,6 +150,9 @@ const VideoPreview = () => {
 
   // Simple video playing state detection
   const videoIsPlaying = videoRef.current ? !videoRef.current.paused && !videoRef.current.ended : false;
+  
+  // Don't show play button overlay during transitions in audio-master mode
+  const shouldShowPlayButton = !videoIsPlaying && !(isAudioMaster && isTransitioning);
 
   return (
     <div ref={previewContainerRef} className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
@@ -163,8 +171,8 @@ const VideoPreview = () => {
               playsInline
               muted={false}
             />
-            {/* Play button overlay */}
-            {!videoIsPlaying && (
+            {/* Play button overlay - don't show during audio-master transitions */}
+            {shouldShowPlayButton && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <Button
                   size="icon"
