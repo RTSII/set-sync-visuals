@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
@@ -83,8 +82,11 @@ const VideoPreview = () => {
         setCurrentTime(0);
       }
     }
-    
-    // Clear transition state when video loads
+  };
+
+  // Handle video canplay event to clear transition state
+  const handleCanPlay = () => {
+    console.log("🎬 VIDEO: Can play - clearing transition state");
     setIsTransitioning(false);
   };
 
@@ -114,7 +116,8 @@ const VideoPreview = () => {
       
       // Update video source if needed
       if (videoRef.current.src !== selectedClip.src) {
-        setIsTransitioning(true); // Set transition state
+        console.log("🎬 VIDEO: Starting transition to new clip");
+        setIsTransitioning(true);
         videoRef.current.src = selectedClip.src;
         videoRef.current.load();
       }
@@ -165,6 +168,7 @@ const VideoPreview = () => {
               className="w-full h-full object-contain"
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
+              onCanPlay={handleCanPlay}
               onEnded={handleVideoEnded}
               onClick={togglePlay}
               preload="metadata"
