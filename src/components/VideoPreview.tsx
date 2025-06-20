@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Rewind, FastForward, Expand } from "lucide-react";
 import { useEditor } from "@/context/EditorContext";
@@ -27,33 +28,30 @@ const VideoPreview = () => {
   } = useEditorStore();
 
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
-  const [isTransitioning, setIsTransitioning] = React.useState(false);
+  const [isVideoTransitioning, setIsVideoTransitioning] = React.useState(false);
   const previewContainerRef = React.useRef<HTMLDivElement>(null);
 
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
 
+  // Simplified time update - only for video-only mode
   const handleTimeUpdate = () => {
-    if (!videoRef.current || !selectedClip) return;
+    if (isAudioMaster || !videoRef.current || !selectedClip) return;
 
     const videoCurrentTime = videoRef.current.currentTime;
     const clipStartTime = selectedClip.startTime ?? 0;
     const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
+    const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
+    
+    setCurrentTime(relativeTime);
 
-    // Only update time in video-only mode
-    if (!isAudioMaster) {
-      const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
-      setCurrentTime(relativeTime);
-
-      // Check for clip ending
-      if (clipEndTime && videoCurrentTime >= (clipEndTime - 0.1)) {
-        handleClipEnded();
-      }
+    // Check for clip ending in video-only mode
+    if (clipEndTime && videoCurrentTime >= (clipEndTime - 0.1)) {
+      handleClipEnded();
     }
   };
 
   const handleVideoEnded = () => {
-    // Always handle video ended in video-only mode
     if (!isAudioMaster) {
       handleClipEnded();
     }
@@ -63,7 +61,6 @@ const VideoPreview = () => {
     if (videoRef.current && selectedClip) {
       const videoDuration = videoRef.current.duration || 0;
 
-      // Update clip metadata if needed
       if (!selectedClip.originalDuration || selectedClip.originalDuration === 0) {
         updateClip(selectedClip.id, {
           startTime: 0,
@@ -76,7 +73,6 @@ const VideoPreview = () => {
         const clipEndTime = selectedClip.endTime ?? videoDuration;
         const clipDuration = clipEndTime - clipStartTime;
 
-        // Set video to clip start time
         videoRef.current.currentTime = clipStartTime;
         setClipDisplayDuration(clipDuration || videoDuration);
         setCurrentTime(0);
@@ -84,10 +80,10 @@ const VideoPreview = () => {
     }
   };
 
-  // Handle video canplay event to clear transition state
+  // Clear transition state when video is ready
   const handleCanPlay = () => {
     console.log("🎬 VIDEO: Can play - clearing transition state");
-    setIsTransitioning(false);
+    setIsVideoTransitioning(false);
   };
 
   const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -101,7 +97,7 @@ const VideoPreview = () => {
     seekToTime(newTime);
   };
 
-  // Handle clip changes
+  // Handle clip changes with proper transition management
   React.useEffect(() => {
     if (videoRef.current && selectedClip) {
       const clipStartTime = selectedClip.startTime ?? 0;
@@ -111,15 +107,25 @@ const VideoPreview = () => {
       setClipDisplayDuration(clipDuration > 0 ? clipDuration : (videoRef.current.duration || 8));
       setCurrentTime(0);
 
-      // Set video time to clip start
-      videoRef.current.currentTime = clipStartTime;
-      
-      // Update video source if needed
+      // Handle video source changes
       if (videoRef.current.src !== selectedClip.src) {
         console.log("🎬 VIDEO: Starting transition to new clip");
-        setIsTransitioning(true);
+        setIsVideoTransitioning(true);
+        
+        // Set up one-time event listener for when video is ready
+        const handleVideoReady = () => {
+          if (videoRef.current) {
+            videoRef.current.currentTime = clipStartTime;
+            videoRef.current.removeEventListener('canplay', handleVideoReady);
+          }
+        };
+        
+        videoRef.current.addEventListener('canplay', handleVideoReady);
         videoRef.current.src = selectedClip.src;
         videoRef.current.load();
+      } else {
+        // Same source, just update time
+        videoRef.current.currentTime = clipStartTime;
       }
     }
   }, [selectedClip?.id, setCurrentTime]);
@@ -151,11 +157,11 @@ const VideoPreview = () => {
   const currentClipIndex = selectedClip ? timelineClips.findIndex(c => c.id === selectedClip.id) + 1 : 0;
   const totalClips = timelineClips.length;
 
-  // Simple video playing state detection
+  // Determine if video is actually playing
   const videoIsPlaying = videoRef.current ? !videoRef.current.paused && !videoRef.current.ended : false;
   
-  // Don't show play button overlay during transitions in audio-master mode
-  const shouldShowPlayButton = !videoIsPlaying && !(isAudioMaster && isTransitioning);
+  // Show play button only when video is not playing AND not transitioning
+  const shouldShowPlayButton = !videoIsPlaying && !isVideoTransitioning;
 
   return (
     <div ref={previewContainerRef} className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
@@ -175,7 +181,7 @@ const VideoPreview = () => {
               playsInline
               muted={false}
             />
-            {/* Play button overlay - don't show during audio-master transitions */}
+            {/* Play button overlay - only show when appropriate */}
             {shouldShowPlayButton && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <Button

@@ -11,7 +11,7 @@ export const useVideoTimeSync = (
     isAudioMaster
   } = useEditorStore();
 
-  // Simple video time sync - only in video-only mode
+  // Only sync video time in video-only mode
   const syncVideoTime = useCallback(() => {
     if (isAudioMaster || !videoRef.current || !selectedClip) {
       return;
