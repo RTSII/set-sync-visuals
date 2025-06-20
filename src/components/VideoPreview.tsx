@@ -25,43 +25,27 @@ const VideoPreview = () => {
     updateClip,
     timelineClips,
     absoluteTimelinePosition,
-    setAbsoluteTimelinePosition,
     isAudioMaster
   } = useEditorStore();
 
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
   const previewContainerRef = React.useRef<HTMLDivElement>(null);
-  const isTransitioning = React.useRef(false);
-  const transitionTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
 
   const handleTimeUpdate = () => {
-    if (videoRef.current && selectedClip && !isTransitioning.current) {
+    if (videoRef.current && selectedClip) {
       const videoCurrentTime = videoRef.current.currentTime;
       const clipStartTime = selectedClip.startTime ?? 0;
       const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
 
       // Check if we've reached the end of the current clip
-      if (clipEndTime && videoCurrentTime >= clipEndTime - 0.02) {
-        console.log("🎬 TIME-UPDATE: Clip reached end, triggering seamless transition");
-        isTransitioning.current = true;
-        
-        // Clear any existing timeout
-        if (transitionTimeoutRef.current) {
-          clearTimeout(transitionTimeoutRef.current);
-        }
-        
-        // Trigger transition immediately
+      if (clipEndTime && videoCurrentTime >= clipEndTime - 0.1) {
+        console.log("🎬 TIME-UPDATE: Clip reached end, triggering transition");
         handleClipEnded();
-        
-        // Reset transition flag after transition should be complete
-        transitionTimeoutRef.current = setTimeout(() => {
-          isTransitioning.current = false;
-        }, 500); // Increased timeout to handle loading delays
       } else {
-        // Update relative time within the clip - but don't update absolute position
+        // Update relative time within the clip
         const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
         setCurrentTime(relativeTime);
       }
@@ -97,9 +81,7 @@ const VideoPreview = () => {
 
   const handleVideoEnded = () => {
     console.log("🎬 VIDEO-END: Video element ended event");
-    if (!isTransitioning.current) {
-      handleClipEnded();
-    }
+    handleClipEnded();
   };
 
   const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -114,7 +96,7 @@ const VideoPreview = () => {
     seekToTime(newTime);
   };
 
-  // Enhanced clip change handler - preserves playback state
+  // Handle clip changes
   React.useEffect(() => {
     if (videoRef.current && selectedClip) {
       const clipStartTime = selectedClip.startTime ?? 0;
@@ -122,27 +104,15 @@ const VideoPreview = () => {
       const clipDuration = (clipEndTime || 0) - clipStartTime;
 
       console.log("🎬 CLIP-CHANGE: Selected clip changed to:", selectedClip.id);
-      console.log("🎬 CLIP-CHANGE: Clip start time:", clipStartTime, "duration:", clipDuration);
       
       setClipDisplayDuration(clipDuration > 0 ? clipDuration : (videoRef.current.duration || 8));
       setCurrentTime(0);
 
-      // Only set video time if it's not already transitioning
-      if (!isTransitioning.current) {
-        console.log("🎬 CLIP-CHANGE: Setting video time to clip start:", clipStartTime);
-        videoRef.current.currentTime = clipStartTime;
-      }
+      // Set video time to clip start
+      console.log("🎬 CLIP-CHANGE: Setting video time to clip start:", clipStartTime);
+      videoRef.current.currentTime = clipStartTime;
     }
   }, [selectedClip?.id, selectedClip?.startTime, selectedClip?.endTime, setCurrentTime]);
-
-  // Cleanup timeout on unmount
-  React.useEffect(() => {
-    return () => {
-      if (transitionTimeoutRef.current) {
-        clearTimeout(transitionTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const toggleFullScreen = () => {
     const elem = previewContainerRef.current;
@@ -171,9 +141,8 @@ const VideoPreview = () => {
   const currentClipIndex = selectedClip ? timelineClips.findIndex(c => c.id === selectedClip.id) + 1 : 0;
   const totalClips = timelineClips.length;
 
-  // Determine if video is actually playing - don't show button during transitions
+  // Determine if video is actually playing
   const videoIsPlaying = videoRef.current ? !videoRef.current.paused : false;
-  const shouldShowPlayButton = !videoIsPlaying && !isTransitioning.current;
 
   return (
     <div ref={previewContainerRef} className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
@@ -192,8 +161,8 @@ const VideoPreview = () => {
               playsInline
               muted={false}
             />
-            {/* Play button overlay - show when video is not playing and not transitioning */}
-            {shouldShowPlayButton && (
+            {/* Play button overlay */}
+            {!videoIsPlaying && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <Button
                   size="icon"

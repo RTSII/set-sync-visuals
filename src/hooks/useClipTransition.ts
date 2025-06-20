@@ -9,16 +9,16 @@ export const useClipTransition = (
   const {
     selectedClip,
     timelineClips,
-    isPlaying,
     setSelectedClip,
     setCurrentTime,
     setAbsoluteTimelinePosition,
-    setIsPlaying
+    setIsPlaying,
+    isAudioMaster
   } = useEditorStore();
 
   const handleClipEnded = useCallback(() => {
-    if (!selectedClip || timelineClips.length === 0 || !audioRef.current) {
-      console.log("🔄 CLIP-END: No clip selected, no clips in timeline, or no audio");
+    if (!selectedClip || timelineClips.length === 0) {
+      console.log("🔄 CLIP-END: No clip selected or no clips in timeline");
       return;
     }
 
@@ -29,7 +29,7 @@ export const useClipTransition = (
       const nextClip = timelineClips[currentIndex + 1];
       console.log("🔄 CLIP-END: Moving to next clip:", nextClip.id);
       
-      // Calculate new absolute position (end of current clip)
+      // Calculate new absolute position
       let newAbsolutePosition = 0;
       for (let i = 0; i <= currentIndex; i++) {
         const clip = timelineClips[i];
@@ -37,78 +37,72 @@ export const useClipTransition = (
         newAbsolutePosition += clipDuration;
       }
       
-      // Store current playing state - CRITICAL for smooth transitions
-      const wasPlaying = !audioRef.current.paused;
-      console.log("🔄 CLIP-END: Audio was playing:", wasPlaying);
-      
-      // Update state immediately for UI consistency
+      // Update state immediately
       setAbsoluteTimelinePosition(newAbsolutePosition);
       setSelectedClip(nextClip);
       setCurrentTime(0);
       
-      // Handle video transition - AUDIO CONTINUES UNINTERRUPTED
+      // Handle video transition
       if (videoRef.current) {
         const video = videoRef.current;
         const nextClipStartTime = nextClip.startTime ?? 0;
+        const wasPlaying = !video.paused;
         
-        console.log("🔄 CLIP-END: Preparing seamless video transition to:", nextClip.id);
+        console.log("🔄 CLIP-END: Video was playing:", wasPlaying);
         
         if (video.src !== nextClip.src) {
-          // Different video source - need to change src and maintain playback
-          console.log("🔄 CLIP-END: Changing video source from", video.src, "to", nextClip.src);
+          // Different video source - preload and transition
+          console.log("🔄 CLIP-END: Changing video source");
           
-          const handleCanPlay = () => {
-            console.log("🔄 CLIP-END: New video can play, syncing to audio time");
+          const handleLoadedData = () => {
+            console.log("🔄 CLIP-END: New video loaded, setting time");
+            video.currentTime = nextClipStartTime;
             
-            // Sync video to current audio time
-            const audioCurrentTime = audioRef.current?.currentTime ?? 0;
-            const relativeVideoTime = audioCurrentTime - newAbsolutePosition + nextClipStartTime;
-            const targetTime = Math.max(nextClipStartTime, relativeVideoTime);
-            
-            console.log("🔄 CLIP-END: Setting video time to:", targetTime, "audio time:", audioCurrentTime);
-            video.currentTime = targetTime;
-            
-            // CRITICAL: Continue playing immediately if audio is playing
             if (wasPlaying) {
-              console.log("🔄 CLIP-END: Resuming video playback immediately");
               video.play().then(() => {
-                console.log("🔄 CLIP-END: ✅ Video playback resumed successfully");
+                console.log("🔄 CLIP-END: ✅ Video playback resumed");
               }).catch(e => {
                 console.error("🔄 CLIP-END: ❌ Video play failed:", e);
               });
             }
             
-            // Remove the event listener
-            video.removeEventListener('canplay', handleCanPlay);
+            video.removeEventListener('loadeddata', handleLoadedData);
           };
           
-          video.addEventListener('canplay', handleCanPlay);
+          video.addEventListener('loadeddata', handleLoadedData);
           video.src = nextClip.src;
-          video.load(); // Force reload
+          video.load();
         } else {
-          // Same video source - just update time and maintain playback
-          console.log("🔄 CLIP-END: Same video source, updating time position");
-          const audioCurrentTime = audioRef.current?.currentTime ?? 0;
-          const relativeVideoTime = audioCurrentTime - newAbsolutePosition + nextClipStartTime;
-          video.currentTime = Math.max(nextClipStartTime, relativeVideoTime);
+          // Same video source - just update time
+          console.log("🔄 CLIP-END: Same video source, updating time");
+          video.currentTime = nextClipStartTime;
           
-          // Continue playing if audio is playing
           if (wasPlaying && video.paused) {
-            console.log("🔄 CLIP-END: Continuing video playback on same source");
             video.play().catch(e => 
               console.error("🔄 CLIP-END: Video play failed:", e)
             );
           }
         }
       }
+      
+      // Handle audio in audio-master mode
+      if (isAudioMaster && audioRef.current) {
+        const audio = audioRef.current;
+        const wasAudioPlaying = !audio.paused;
+        
+        // Audio continues uninterrupted in audio-master mode
+        if (wasAudioPlaying) {
+          console.log("🔄 CLIP-END: Audio continues playing (master mode)");
+        }
+      }
     } else {
-      // End of timeline - stop both video and audio
-      console.log("🔄 CLIP-END: Reached end of timeline, stopping playback");
+      // End of timeline - stop playback
+      console.log("🔄 CLIP-END: Reached end of timeline");
       if (videoRef.current) videoRef.current.pause();
       if (audioRef.current) audioRef.current.pause();
       setIsPlaying(false);
     }
-  }, [selectedClip, timelineClips, setSelectedClip, setCurrentTime, setAbsoluteTimelinePosition, setIsPlaying]);
+  }, [selectedClip, timelineClips, setSelectedClip, setCurrentTime, setAbsoluteTimelinePosition, setIsPlaying, isAudioMaster]);
 
   return {
     handleClipEnded
