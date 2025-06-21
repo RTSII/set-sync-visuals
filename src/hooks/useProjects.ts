@@ -13,10 +13,10 @@ export interface Project {
     clips: TimelineClip[];
     audioUrl?: string;
     duration?: number;
-  };
-  audio_url?: string;
+  } | null;
+  audio_url?: string | null;
   waveform_data?: any;
-  duration?: number;
+  duration?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -37,7 +37,14 @@ export const useProjects = () => {
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      setProjects(data || []);
+      
+      // Transform the data to match our Project interface
+      const transformedData = (data || []).map(item => ({
+        ...item,
+        timeline_data: item.timeline_data as Project['timeline_data']
+      }));
+      
+      setProjects(transformedData);
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast.error('Failed to load projects');
@@ -76,7 +83,10 @@ export const useProjects = () => {
           .single();
         
         if (error) throw error;
-        result = data;
+        result = {
+          ...data,
+          timeline_data: data.timeline_data as Project['timeline_data']
+        };
         toast.success('Project updated successfully!');
       } else {
         // Create new project
@@ -87,7 +97,10 @@ export const useProjects = () => {
           .single();
         
         if (error) throw error;
-        result = data;
+        result = {
+          ...data,
+          timeline_data: data.timeline_data as Project['timeline_data']
+        };
         toast.success('Project saved successfully!');
       }
 
@@ -130,7 +143,11 @@ export const useProjects = () => {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return {
+        ...data,
+        timeline_data: data.timeline_data as Project['timeline_data']
+      };
     } catch (error) {
       console.error('Error loading project:', error);
       toast.error('Failed to load project');

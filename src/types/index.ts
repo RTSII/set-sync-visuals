@@ -13,3 +13,13 @@ export type MediaClip = {
   originalDuration?: number;
   transition?: Transition | null; // Transition from the PREVIOUS clip to this one
 };
+
+export type TimelineClip = {
+  id: string;
+  src: string;
+  file: File;
+  startTime?: number;
+  endTime?: number;
+  originalDuration?: number;
+  transition?: Transition | null;
+};
