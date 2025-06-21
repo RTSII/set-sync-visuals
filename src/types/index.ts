@@ -23,3 +23,21 @@ export type TimelineClip = {
   originalDuration?: number;
   transition?: Transition | null;
 };
+
+// Serializable version for database storage (without File objects)
+export type SerializableClip = {
+  id: string;
+  src: string;
+  fileName: string;
+  fileType: string;
+  startTime?: number;
+  endTime?: number;
+  originalDuration?: number;
+  transition?: Transition | null;
+};
+
+export type SerializableTimelineData = {
+  clips: SerializableClip[];
+  audioUrl?: string;
+  duration?: number;
+};

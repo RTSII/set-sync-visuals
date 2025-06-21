@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import React, { useRef, useEffect, useState } from "react";
@@ -155,16 +156,14 @@ const Timeline = () => {
   const handleTimelineDragSort = () => {
     if (dragItem.current === null || dragOverItem.current === null || dragItem.current === dragOverItem.current) return;
 
-    setTimelineClips(prevClips => {
-      const newClips = [...prevClips];
-      const draggedItemContent = newClips.splice(dragItem.current!, 1)[0];
-      if (draggedItemContent) {
-        newClips.splice(dragOverItem.current!, 0, draggedItemContent);
-      }
-      dragItem.current = null;
-      dragOverItem.current = null;
-      return newClips;
-    });
+    const newClips = [...timelineClips];
+    const draggedItemContent = newClips.splice(dragItem.current!, 1)[0];
+    if (draggedItemContent) {
+      newClips.splice(dragOverItem.current!, 0, draggedItemContent);
+    }
+    dragItem.current = null;
+    dragOverItem.current = null;
+    setTimelineClips(newClips);
   };
 
   const handleToggleTransition = (clipId: string, currentTransition: Transition | null | undefined) => {
