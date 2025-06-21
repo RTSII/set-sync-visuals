@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import MediaLibrary from "@/components/MediaLibrary";
 import Timeline from "@/components/Timeline";
 import VideoPreview from "@/components/VideoPreview";
-import { WorkflowTutorial } from "@/components/WorkflowTutorial";
+import WorkflowTutorial from "@/components/WorkflowTutorial";
 import { EditorProvider } from "@/context/EditorContext";
 import ProjectDashboard from "@/components/ProjectDashboard";
 import { useProjects, Project } from "@/hooks/useProjects";
