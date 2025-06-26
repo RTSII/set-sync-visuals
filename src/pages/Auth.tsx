@@ -90,126 +90,158 @@ const Auth = () => {
             className="w-[700px] h-[700px] object-contain opacity-90"
           />
           
-          {/* Strategically positioned form fields over the logo */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            {/* Position form in the center-right area of the logo where there's space */}
-            <div className="w-80 translate-x-12 translate-y-8">
-              <Card className="bg-black/30 border-cyan-400/40 backdrop-blur-md shadow-2xl shadow-cyan-500/25">
-                <CardContent className="p-6">
-                  <Tabs defaultValue="signin" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 bg-black/40 border border-cyan-400/30 mb-6">
-                      <TabsTrigger 
-                        value="signin" 
-                        className="text-slate-300 data-[state=active]:text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500/60 data-[state=active]:to-purple-500/60"
-                      >
-                        Sign In
-                      </TabsTrigger>
-                      <TabsTrigger 
-                        value="signup" 
-                        className="text-slate-300 data-[state=active]:text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500/60 data-[state=active]:to-purple-500/60"
-                      >
-                        Sign Up
-                      </TabsTrigger>
-                    </TabsList>
+          {/* Strategically positioned form elements over the logo */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <Tabs defaultValue="signin" className="w-full max-w-md">
+              {/* Sign Up text at top of RVJ logo */}
+              <div className="-mt-48 mb-8">
+                <TabsList className="grid w-full grid-cols-2 bg-black/60 border border-cyan-400/40 backdrop-blur-md">
+                  <TabsTrigger 
+                    value="signin" 
+                    className="text-slate-300 data-[state=active]:text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500/60 data-[state=active]:to-purple-500/60"
+                  >
+                    Sign In
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="signup" 
+                    className="text-slate-300 data-[state=active]:text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500/60 data-[state=active]:to-purple-500/60"
+                  >
+                    Sign Up
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-                    <TabsContent value="signin" className="space-y-4">
-                      <form onSubmit={handleSignIn} className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="signin-email" className="text-slate-200 text-sm font-medium">Email</Label>
-                          <Input
-                            id="signin-email"
-                            type="email"
-                            placeholder="Enter your email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            className="bg-black/50 border-cyan-400/50 text-white placeholder:text-slate-400 focus:border-cyan-400 focus:ring-cyan-400/30 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="signin-password" className="text-slate-200 text-sm font-medium">Password</Label>
-                          <Input
-                            id="signin-password"
-                            type="password"
-                            placeholder="Enter your password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            className="bg-black/50 border-cyan-400/50 text-white placeholder:text-slate-400 focus:border-cyan-400 focus:ring-cyan-400/30 text-sm"
-                          />
-                        </div>
-                        <Button 
-                          type="submit" 
-                          disabled={loading}
-                          className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white font-semibold shadow-lg shadow-cyan-500/25 border-0 transition-all duration-200"
-                        >
-                          {loading ? 'Signing in...' : 'Sign In'}
-                        </Button>
-                      </form>
-                    </TabsContent>
+              <TabsContent value="signin" className="space-y-6">
+                <form onSubmit={handleSignIn} className="space-y-6">
+                  {/* Email and password fields centered under RVJ letters */}
+                  <div className="-mt-4 space-y-4">
+                    <div className="space-y-2">
+                      <Input
+                        id="signin-email"
+                        type="email"
+                        placeholder="Email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="bg-black/60 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Input
+                        id="signin-password"
+                        type="password"
+                        placeholder="Password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="bg-black/60 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Sign In button over silver bezel */}
+                  <div className="mt-16">
+                    <Button 
+                      type="submit" 
+                      disabled={loading}
+                      className="w-full bg-gradient-to-r from-cyan-500/80 to-purple-600/80 hover:from-cyan-600/90 hover:to-purple-700/90 text-white font-semibold shadow-lg backdrop-blur-md border border-cyan-400/30"
+                    >
+                      {loading ? 'Signing in...' : 'Sign In'}
+                    </Button>
+                  </div>
+                  
+                  {/* Switch to sign up link over lights area */}
+                  <div className="mt-24 text-center">
+                    <p className="text-slate-300 text-sm">
+                      Don't have an account?{' '}
+                      <button
+                        type="button"
+                        onClick={() => document.querySelector('[data-state="inactive"]')?.click()}
+                        className="text-cyan-400 hover:text-cyan-300 underline font-medium"
+                      >
+                        Sign up here
+                      </button>
+                    </p>
+                  </div>
+                </form>
+              </TabsContent>
 
-                    <TabsContent value="signup" className="space-y-3">
-                      <form onSubmit={handleSignUp} className="space-y-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-name" className="text-slate-200 text-sm font-medium">Full name</Label>
-                          <Input
-                            id="signup-name"
-                            type="text"
-                            placeholder="John Smith"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            className="bg-black/50 border-cyan-400/50 text-white placeholder:text-slate-400 focus:border-cyan-400 focus:ring-cyan-400/30 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-email" className="text-slate-200 text-sm font-medium">Email</Label>
-                          <Input
-                            id="signup-email"
-                            type="email"
-                            placeholder="Enter your email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            className="bg-black/50 border-cyan-400/50 text-white placeholder:text-slate-400 focus:border-cyan-400 focus:ring-cyan-400/30 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-password" className="text-slate-200 text-sm font-medium">Password</Label>
-                          <Input
-                            id="signup-password"
-                            type="password"
-                            placeholder="Create a password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            className="bg-black/50 border-cyan-400/50 text-white placeholder:text-slate-400 focus:border-cyan-400 focus:ring-cyan-400/30 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="confirm-password" className="text-slate-200 text-sm font-medium">Re-enter password</Label>
-                          <Input
-                            id="confirm-password"
-                            type="password"
-                            placeholder="Confirm your password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            required
-                            className="bg-black/50 border-cyan-400/50 text-white placeholder:text-slate-400 focus:border-cyan-400 focus:ring-cyan-400/30 text-sm"
-                          />
-                        </div>
-                        <Button 
-                          type="submit" 
-                          disabled={loading}
-                          className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white font-semibold shadow-lg shadow-cyan-500/25 border-0 transition-all duration-200"
-                        >
-                          {loading ? 'Creating account...' : 'Sign Up'}
-                        </Button>
-                      </form>
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-            </div>
+              <TabsContent value="signup" className="space-y-4">
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  {/* Name, email, and password fields centered under RVJ letters */}
+                  <div className="-mt-4 space-y-3">
+                    <div className="space-y-2">
+                      <Input
+                        id="signup-name"
+                        type="text"
+                        placeholder="Full Name"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="bg-black/60 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="Email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="bg-black/60 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        placeholder="Password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="bg-black/60 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        placeholder="Confirm Password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        className="bg-black/60 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Sign Up button over silver bezel */}
+                  <div className="mt-8">
+                    <Button 
+                      type="submit" 
+                      disabled={loading}
+                      className="w-full bg-gradient-to-r from-cyan-500/80 to-purple-600/80 hover:from-cyan-600/90 hover:to-purple-700/90 text-white font-semibold shadow-lg backdrop-blur-md border border-cyan-400/30"
+                    >
+                      {loading ? 'Creating account...' : 'Sign Up'}
+                    </Button>
+                  </div>
+                  
+                  {/* Switch to sign in link over lights area */}
+                  <div className="mt-16 text-center">
+                    <p className="text-slate-300 text-sm">
+                      Already have an account?{' '}
+                      <button
+                        type="button"
+                        onClick={() => document.querySelector('[data-state="inactive"]')?.click()}
+                        className="text-cyan-400 hover:text-cyan-300 underline font-medium"
+                      >
+                        Sign in here
+                      </button>
+                    </p>
+                  </div>
+                </form>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
