@@ -15,6 +15,7 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('signin');
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
@@ -65,7 +66,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden flex items-center justify-center">
+    <div className="min-h-screen bg-black relative overflow-hidden flex items-center justify-center">
       {/* Animated background elements */}
       <div className="absolute inset-0">
         {/* Gradient orbs */}
@@ -81,20 +82,20 @@ const Auth = () => {
       </div>
 
       {/* Main content container with logo and overlaid form */}
-      <div className="relative z-10 w-full max-w-7xl px-6 flex items-center justify-center">
+      <div className="relative z-10 w-full h-full flex items-center justify-center">
         <div className="relative flex items-center justify-center">
-          {/* RVJ Logo as background */}
+          {/* RVJ Logo scaled to fit screen without scrolling */}
           <img 
-            src="/lovable-uploads/87ddeedc-7faa-4e51-bdae-9ab30d1c624f.png" 
+            src="/lovable-uploads/421f65e3-022b-4c82-ab33-31f0b9ecdf6d.png" 
             alt="RVJ Logo" 
-            className="w-[700px] h-[700px] object-contain opacity-90"
+            className="w-[min(90vw,600px)] h-[min(90vh,600px)] object-contain"
           />
           
-          {/* Strategically positioned form elements over the logo */}
+          {/* Form elements positioned precisely over the logo */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <Tabs defaultValue="signin" className="w-full max-w-md">
-              {/* Sign Up text at top of RVJ logo */}
-              <div className="-mt-48 mb-8">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-sm">
+              {/* Tab selector positioned at very top of logo */}
+              <div className="absolute -top-24 left-1/2 transform -translate-x-1/2 w-full">
                 <TabsList className="grid w-full grid-cols-2 bg-black/60 border border-cyan-400/40 backdrop-blur-md">
                   <TabsTrigger 
                     value="signin" 
@@ -113,8 +114,8 @@ const Auth = () => {
 
               <TabsContent value="signin" className="space-y-6">
                 <form onSubmit={handleSignIn} className="space-y-6">
-                  {/* Email and password fields centered under RVJ letters */}
-                  <div className="-mt-4 space-y-4">
+                  {/* Email and password fields positioned in center area */}
+                  <div className="space-y-4">
                     <div className="space-y-2">
                       <Input
                         id="signin-email"
@@ -139,8 +140,8 @@ const Auth = () => {
                     </div>
                   </div>
                   
-                  {/* Sign In button over silver bezel */}
-                  <div className="mt-16">
+                  {/* Sign In button positioned over silver bezel area */}
+                  <div className="mt-8">
                     <Button 
                       type="submit" 
                       disabled={loading}
@@ -150,13 +151,13 @@ const Auth = () => {
                     </Button>
                   </div>
                   
-                  {/* Switch to sign up link over lights area */}
-                  <div className="mt-24 text-center">
+                  {/* Switch to sign up link positioned at bottom */}
+                  <div className="mt-16 text-center">
                     <p className="text-slate-300 text-sm">
                       Don't have an account?{' '}
                       <button
                         type="button"
-                        onClick={() => document.querySelector('[data-state="inactive"]')?.click()}
+                        onClick={() => setActiveTab('signup')}
                         className="text-cyan-400 hover:text-cyan-300 underline font-medium"
                       >
                         Sign up here
@@ -168,8 +169,8 @@ const Auth = () => {
 
               <TabsContent value="signup" className="space-y-4">
                 <form onSubmit={handleSignUp} className="space-y-4">
-                  {/* Name, email, and password fields centered under RVJ letters */}
-                  <div className="-mt-4 space-y-3">
+                  {/* Name, email, and password fields positioned in center area */}
+                  <div className="space-y-3">
                     <div className="space-y-2">
                       <Input
                         id="signup-name"
@@ -215,8 +216,8 @@ const Auth = () => {
                     </div>
                   </div>
                   
-                  {/* Sign Up button over silver bezel */}
-                  <div className="mt-8">
+                  {/* Sign Up button positioned over silver bezel area */}
+                  <div className="mt-6">
                     <Button 
                       type="submit" 
                       disabled={loading}
@@ -226,13 +227,13 @@ const Auth = () => {
                     </Button>
                   </div>
                   
-                  {/* Switch to sign in link over lights area */}
-                  <div className="mt-16 text-center">
+                  {/* Switch to sign in link positioned at bottom */}
+                  <div className="mt-12 text-center">
                     <p className="text-slate-300 text-sm">
                       Already have an account?{' '}
                       <button
                         type="button"
-                        onClick={() => document.querySelector('[data-state="inactive"]')?.click()}
+                        onClick={() => setActiveTab('signin')}
                         className="text-cyan-400 hover:text-cyan-300 underline font-medium"
                       >
                         Sign in here
