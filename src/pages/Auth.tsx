@@ -78,61 +78,57 @@ const Auth = () => {
         <div className="relative flex items-center justify-center">
           {/* RVJ Logo - middle layer */}
           <img 
-            src="/lovable-uploads/421f65e3-022b-4c82-ab33-31f0b9ecdf6d.png" 
+            src="/lovable-uploads/68782036-637d-4eae-9d56-aeb41156f0bd.png" 
             alt="RVJ Logo" 
-            className="w-[min(85vw,550px)] h-[min(85vh,550px)] object-contain relative z-20"
+            className="w-[min(85vw,500px)] h-[min(85vh,500px)] object-contain relative z-20"
           />
           
           {/* Form elements positioned precisely over the logo - top layer */}
           <div className="absolute inset-0 flex flex-col items-center justify-center z-30">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-xs">
-              <TabsContent value="signin" className="space-y-4">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  {/* Position 1: Sign In text at top */}
-                  <div className="text-center -mt-24">
-                    <h2 className="text-xl font-bold text-white">Sign In</h2>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsContent value="signin">
+                <form onSubmit={handleSignIn} className="relative w-full h-full">
+                  {/* Position 1: Sign In text at very top */}
+                  <div className="absolute top-[15%] left-1/2 transform -translate-x-1/2">
+                    <h2 className="text-lg font-bold text-white">Sign In</h2>
                   </div>
                   
-                  {/* Position 2: Email and password fields in center area */}
-                  <div className="space-y-3 -mt-2">
-                    <div className="space-y-2">
-                      <Input
-                        id="signin-email"
-                        type="email"
-                        placeholder="Email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        className="bg-black/70 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md h-7 text-sm px-2 w-48 mx-auto"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Input
-                        id="signin-password"
-                        type="password"
-                        placeholder="Password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        className="bg-black/70 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md h-7 text-sm px-2 w-48 mx-auto"
-                      />
-                    </div>
+                  {/* Position 2: Email and password fields in center */}
+                  <div className="absolute top-[42%] left-1/2 transform -translate-x-1/2 space-y-2">
+                    <Input
+                      id="signin-email"
+                      type="email"
+                      placeholder="Email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="bg-black/70 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md h-6 text-xs px-2 w-36"
+                    />
+                    <Input
+                      id="signin-password"
+                      type="password"
+                      placeholder="Password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="bg-black/70 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md h-6 text-xs px-2 w-36"
+                    />
                   </div>
                   
                   {/* Position 3: Sign In button */}
-                  <div className="mt-4 flex justify-center">
+                  <div className="absolute top-[58%] left-1/2 transform -translate-x-1/2">
                     <Button 
                       type="submit" 
                       disabled={loading}
-                      className="bg-gradient-to-r from-cyan-500/80 to-purple-600/80 hover:from-cyan-600/90 hover:to-purple-700/90 text-white font-semibold shadow-lg backdrop-blur-md border border-cyan-400/30 h-7 text-sm w-48"
+                      className="bg-gradient-to-r from-cyan-500/80 to-purple-600/80 hover:from-cyan-600/90 hover:to-purple-700/90 text-white font-semibold shadow-lg backdrop-blur-md border border-cyan-400/30 h-6 text-xs w-36"
                     >
                       {loading ? 'Signing in...' : 'Sign In'}
                     </Button>
                   </div>
                   
                   {/* Position 4: Switch to sign up link at bottom */}
-                  <div className="mt-8 text-center">
-                    <p className="text-slate-300 text-xs">
+                  <div className="absolute top-[78%] left-1/2 transform -translate-x-1/2">
+                    <p className="text-slate-300 text-xs text-center">
                       Don't have an account?{' '}
                       <button
                         type="button"
@@ -146,74 +142,66 @@ const Auth = () => {
                 </form>
               </TabsContent>
 
-              <TabsContent value="signup" className="space-y-3">
-                <form onSubmit={handleSignUp} className="space-y-3">
-                  {/* Position 1: Sign Up text at top */}
-                  <div className="text-center -mt-24">
-                    <h2 className="text-xl font-bold text-white">Sign Up</h2>
+              <TabsContent value="signup">
+                <form onSubmit={handleSignUp} className="relative w-full h-full">
+                  {/* Position 1: Sign Up text at very top */}
+                  <div className="absolute top-[12%] left-1/2 transform -translate-x-1/2">
+                    <h2 className="text-lg font-bold text-white">Sign Up</h2>
                   </div>
                   
-                  {/* Position 2: Name, email, and password fields in center area */}
-                  <div className="space-y-2 -mt-1">
-                    <div className="space-y-2">
-                      <Input
-                        id="signup-name"
-                        type="text"
-                        placeholder="Full Name"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        className="bg-black/70 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md h-7 text-sm px-2 w-48 mx-auto"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="Email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        className="bg-black/70 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md h-7 text-sm px-2 w-48 mx-auto"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Input
-                        id="signup-password"
-                        type="password"
-                        placeholder="Password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        className="bg-black/70 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md h-7 text-sm px-2 w-48 mx-auto"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Input
-                        id="confirm-password"
-                        type="password"
-                        placeholder="Confirm Password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                        className="bg-black/70 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md h-7 text-sm px-2 w-48 mx-auto"
-                      />
-                    </div>
+                  {/* Position 2: Form fields in center */}
+                  <div className="absolute top-[35%] left-1/2 transform -translate-x-1/2 space-y-1.5">
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      placeholder="Full Name"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="bg-black/70 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md h-6 text-xs px-2 w-36"
+                    />
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="Email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="bg-black/70 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md h-6 text-xs px-2 w-36"
+                    />
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      placeholder="Password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="bg-black/70 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md h-6 text-xs px-2 w-36"
+                    />
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="Confirm Password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      className="bg-black/70 border-cyan-400/50 text-white placeholder:text-slate-300 focus:border-cyan-400 focus:ring-cyan-400/30 text-center backdrop-blur-md h-6 text-xs px-2 w-36"
+                    />
                   </div>
                   
                   {/* Position 3: Sign Up button */}
-                  <div className="mt-3 flex justify-center">
+                  <div className="absolute top-[62%] left-1/2 transform -translate-x-1/2">
                     <Button 
                       type="submit" 
                       disabled={loading}
-                      className="bg-gradient-to-r from-cyan-500/80 to-purple-600/80 hover:from-cyan-600/90 hover:to-purple-700/90 text-white font-semibold shadow-lg backdrop-blur-md border border-cyan-400/30 h-7 text-sm w-48"
+                      className="bg-gradient-to-r from-cyan-500/80 to-purple-600/80 hover:from-cyan-600/90 hover:to-purple-700/90 text-white font-semibold shadow-lg backdrop-blur-md border border-cyan-400/30 h-6 text-xs w-36"
                     >
                       {loading ? 'Creating account...' : 'Sign Up'}
                     </Button>
                   </div>
                   
                   {/* Position 4: Switch to sign in link at bottom */}
-                  <div className="mt-6 text-center">
-                    <p className="text-slate-300 text-xs">
+                  <div className="absolute top-[78%] left-1/2 transform -translate-x-1/2">
+                    <p className="text-slate-300 text-xs text-center">
                       Already have an account?{' '}
                       <button
                         type="button"
