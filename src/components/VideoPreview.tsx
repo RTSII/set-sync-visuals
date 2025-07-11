@@ -187,19 +187,30 @@ const VideoPreview = () => {
               onLoadedMetadata={handleLoadedMetadata}
               onEnded={handleVideoEnded}
               onClick={togglePlay}
-              preload="auto"
+              preload="metadata"
               playsInline
               muted={false}
               onWaiting={() => {
                 console.log("🎬 BUFFER: Video buffering...");
                 setIsBuffering(true);
               }}
+              onCanPlay={() => {
+                console.log("🎬 BUFFER: Video can start playing");
+                setIsBuffering(false);
+              }}
               onCanPlayThrough={() => {
                 console.log("🎬 BUFFER: Video ready to play through");
                 setIsBuffering(false);
               }}
               onLoadStart={() => console.log("🎬 BUFFER: Video load started")}
-              onProgress={() => console.log("🎬 BUFFER: Video loading progress")}
+              onSeeking={() => {
+                console.log("🎬 BUFFER: Video seeking...");
+                setIsBuffering(true);
+              }}
+              onSeeked={() => {
+                console.log("🎬 BUFFER: Video seek complete");
+                setIsBuffering(false);
+              }}
             />
             {/* Loading/Buffering Indicator */}
             {isBuffering && (
