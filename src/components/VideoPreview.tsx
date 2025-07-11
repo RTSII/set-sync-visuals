@@ -36,8 +36,12 @@ const VideoPreview = () => {
 
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
   const [isBuffering, setIsBuffering] = React.useState(false);
+  const [bufferLevel, setBufferLevel] = React.useState(0);
+  const [retryCount, setRetryCount] = React.useState(0);
+  const maxRetries = 3;
   const isTransitioning = React.useRef(false);
   const transitionTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const bufferCheckInterval = React.useRef<NodeJS.Timeout | null>(null);
 
   // Enable keyboard shortcuts and video preloading
   useKeyboardShortcuts();
@@ -125,11 +129,69 @@ const VideoPreview = () => {
     }
   }, [firstClip?.id, firstClip?.src, firstClip?.startTime, firstClip?.endTime, setCurrentTime, setAbsoluteTimelinePosition]);
 
+  // Buffer level monitoring
+  React.useEffect(() => {
+    if (videoRef.current) {
+      const checkBuffer = () => {
+        const video = videoRef.current;
+        if (video && video.buffered.length > 0) {
+          const currentTime = video.currentTime;
+          const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+          const bufferAhead = Math.max(0, bufferedEnd - currentTime);
+          const bufferPercentage = Math.min(100, (bufferAhead / 5) * 100); // 5 seconds ahead = 100%
+          setBufferLevel(bufferPercentage);
+          
+          // If buffer is low, show buffering indicator
+          if (bufferAhead < 2 && !video.paused) {
+            setIsBuffering(true);
+          } else if (bufferAhead > 3) {
+            setIsBuffering(false);
+          }
+        }
+      };
+
+      bufferCheckInterval.current = setInterval(checkBuffer, 1000);
+      return () => {
+        if (bufferCheckInterval.current) {
+          clearInterval(bufferCheckInterval.current);
+        }
+      };
+    }
+  }, [firstClip?.id]);
+
+  // Error handling with retry mechanism
+  const handleVideoError = React.useCallback(() => {
+    console.error("🎬 ERROR: Video failed to load, attempt:", retryCount + 1);
+    
+    if (retryCount < maxRetries && firstClip) {
+      setRetryCount(prev => prev + 1);
+      setTimeout(() => {
+        if (videoRef.current) {
+          console.log("🎬 RETRY: Retrying video load...");
+          videoRef.current.load();
+        }
+      }, 1000 * retryCount); // Exponential backoff
+    } else {
+      toast.error("Video failed to load", { 
+        description: "Please check your internet connection and try again." 
+      });
+      setIsBuffering(false);
+    }
+  }, [retryCount, maxRetries, firstClip]);
+
+  // Reset retry count when clip changes
+  React.useEffect(() => {
+    setRetryCount(0);
+  }, [firstClip?.id]);
+
   // Cleanup timeout on unmount
   React.useEffect(() => {
     return () => {
       if (transitionTimeoutRef.current) {
         clearTimeout(transitionTimeoutRef.current);
+      }
+      if (bufferCheckInterval.current) {
+        clearInterval(bufferCheckInterval.current);
       }
     };
   }, []);
@@ -187,7 +249,7 @@ const VideoPreview = () => {
               onLoadedMetadata={handleLoadedMetadata}
               onEnded={handleVideoEnded}
               onClick={togglePlay}
-              preload="metadata"
+              preload="auto"
               playsInline
               muted={false}
               onWaiting={() => {
@@ -202,7 +264,14 @@ const VideoPreview = () => {
                 console.log("🎬 BUFFER: Video ready to play through");
                 setIsBuffering(false);
               }}
-              onLoadStart={() => console.log("🎬 BUFFER: Video load started")}
+              onLoadStart={() => {
+                console.log("🎬 BUFFER: Video load started");
+                setIsBuffering(true);
+              }}
+              onLoadedData={() => {
+                console.log("🎬 BUFFER: Video data loaded");
+                setIsBuffering(false);
+              }}
               onSeeking={() => {
                 console.log("🎬 BUFFER: Video seeking...");
                 setIsBuffering(true);
@@ -211,11 +280,36 @@ const VideoPreview = () => {
                 console.log("🎬 BUFFER: Video seek complete");
                 setIsBuffering(false);
               }}
+              onError={handleVideoError}
+              onStalled={() => {
+                console.log("🎬 BUFFER: Video stalled");
+                setIsBuffering(true);
+              }}
+              onSuspend={() => {
+                console.log("🎬 BUFFER: Video suspended");
+                setIsBuffering(false);
+              }}
             />
-            {/* Loading/Buffering Indicator */}
+            {/* Enhanced Loading/Buffering Indicator */}
             {isBuffering && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/30">
+                <div className="bg-black/70 rounded-lg p-4 flex flex-col items-center gap-3">
+                  <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <div className="text-white text-sm text-center">
+                    <p>Buffering...</p>
+                    {bufferLevel > 0 && (
+                      <div className="w-32 h-1 bg-white/20 rounded-full mt-2 overflow-hidden">
+                        <div 
+                          className="h-full bg-white transition-all duration-300"
+                          style={{ width: `${bufferLevel}%` }}
+                        />
+                      </div>
+                    )}
+                    {retryCount > 0 && (
+                      <p className="text-xs text-white/70 mt-1">Retry {retryCount}/{maxRetries}</p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
             

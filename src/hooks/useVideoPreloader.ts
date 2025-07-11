@@ -31,32 +31,37 @@ export const useVideoPreloader = (clips: MediaClip[], currentClipId: string | un
 
     // Preload only the next clip if it exists and isn't already preloaded
     if (nextClip && !preloadedVideos.current.has(nextClip.id)) {
-      isPreloading.current = true;
-      
-      const video = document.createElement('video');
-      video.src = nextClip.src;
-      video.preload = 'metadata'; // Less aggressive preloading
-      video.muted = true;
-      
-      const handleCanPlay = () => {
-        console.log("🎬 PRELOAD: Video ready for clip:", nextClip.id);
-        video.removeEventListener('canplay', handleCanPlay);
-        isPreloading.current = false;
-      };
-      
-      const handleError = () => {
-        console.error("🎬 PRELOAD: Error preloading clip:", nextClip.id);
-        video.removeEventListener('error', handleError);
-        preloadedVideos.current.delete(nextClip.id);
-        isPreloading.current = false;
-      };
-      
-      video.addEventListener('canplay', handleCanPlay);
-      video.addEventListener('error', handleError);
-      video.load();
-      
-      preloadedVideos.current.set(nextClip.id, video);
-      console.log("🎬 PRELOAD: Started preloading next clip:", nextClip.id);
+      // Wait a bit before starting preload to not interfere with current video
+      setTimeout(() => {
+        if (isPreloading.current) return;
+        
+        isPreloading.current = true;
+        
+        const video = document.createElement('video');
+        video.src = nextClip.src;
+        video.preload = 'auto'; // More aggressive for next clip only
+        video.muted = true;
+        
+        const handleCanPlay = () => {
+          console.log("🎬 PRELOAD: Video ready for clip:", nextClip.id);
+          video.removeEventListener('canplay', handleCanPlay);
+          isPreloading.current = false;
+        };
+        
+        const handleError = () => {
+          console.error("🎬 PRELOAD: Error preloading clip:", nextClip.id);
+          video.removeEventListener('error', handleError);
+          preloadedVideos.current.delete(nextClip.id);
+          isPreloading.current = false;
+        };
+        
+        video.addEventListener('canplay', handleCanPlay);
+        video.addEventListener('error', handleError);
+        video.load();
+        
+        preloadedVideos.current.set(nextClip.id, video);
+        console.log("🎬 PRELOAD: Started preloading next clip:", nextClip.id);
+      }, 2000); // Wait 2 seconds before starting preload
     }
   }, [clips, currentClipId]);
 
