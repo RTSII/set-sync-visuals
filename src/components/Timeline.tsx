@@ -237,18 +237,19 @@ const Timeline = () => {
   const playheadPosition = getPlayheadPosition();
 
   return (
-    <Card className="flex flex-col h-full bg-transparent border-0 shadow-none overflow-hidden">
+    <Card className="flex flex-col h-full bg-card/50 border border-border/50 shadow-sm overflow-hidden">
       {audioSrc && <audio ref={audioRef} src={audioSrc} />}
       <TimelineControls handleExport={handleExport} />
-      <CardContent className="p-2 pt-1 flex-1 min-h-0 overflow-hidden">
+      <CardContent className="p-3 pt-2 flex-1 min-h-0 overflow-hidden">
         {isExporting && (
-          <div className="mb-1 space-y-1">
-            <p className="text-xs text-muted-foreground text-center">Processing video, please wait...</p>
-            <Progress value={exportProgress} className="w-full h-1" />
+          <div className="mb-3 p-3 bg-secondary/20 border border-border/30 rounded-lg space-y-2">
+            <p className="text-sm text-foreground font-medium text-center">Exporting Video...</p>
+            <Progress value={exportProgress} className="w-full h-2" />
+            <p className="text-xs text-muted-foreground text-center">{Math.round(exportProgress)}% complete</p>
           </div>
         )}
         <div
-          className="relative min-w-[600px] h-full overflow-x-auto overflow-y-hidden cursor-pointer"
+          className="relative min-w-[600px] h-full overflow-x-auto overflow-y-hidden cursor-pointer bg-background/30 border border-border/30 rounded-lg"
           onDrop={handleDropOnTimeline}
           onDragOver={(e) => e.preventDefault()}
           onClick={handleTimelineClick}

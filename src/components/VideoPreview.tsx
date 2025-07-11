@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Rewind, FastForward, Expand } from "lucide-react";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useVideoPreloader } from "@/hooks/useVideoPreloader";
 import { useEditor } from "@/context/EditorContext";
 import { useEditorStore } from "@/lib/store";
 import { toast } from "sonner";
@@ -31,11 +32,13 @@ const VideoPreview = () => {
   } = useEditorStore();
 
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
+  const [isBuffering, setIsBuffering] = React.useState(false);
   const isTransitioning = React.useRef(false);
   const transitionTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  // Enable keyboard shortcuts
+  // Enable keyboard shortcuts and video preloading
   useKeyboardShortcuts();
+  const { isPreloaded } = useVideoPreloader(timelineClips, selectedClip?.id);
 
   const handleTimeUpdate = () => {
     if (videoRef.current && selectedClip && !isTransitioning.current) {
@@ -177,11 +180,36 @@ const VideoPreview = () => {
               onLoadedMetadata={handleLoadedMetadata}
               onEnded={handleVideoEnded}
               onClick={togglePlay}
-              preload="metadata"
+              preload="auto"
               playsInline
               muted={false}
+              onWaiting={() => {
+                console.log("🎬 BUFFER: Video buffering...");
+                setIsBuffering(true);
+              }}
+              onCanPlayThrough={() => {
+                console.log("🎬 BUFFER: Video ready to play through");
+                setIsBuffering(false);
+              }}
+              onLoadStart={() => console.log("🎬 BUFFER: Video load started")}
+              onProgress={() => console.log("🎬 BUFFER: Video loading progress")}
             />
-            {shouldShowPlayButton && (
+            {/* Loading/Buffering Indicator */}
+            {isBuffering && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              </div>
+            )}
+            
+            {/* Preload Status Indicator */}
+            {selectedClip && (
+              <div className="absolute top-2 right-2 flex items-center gap-1 text-xs text-white/70 bg-black/50 px-2 py-1 rounded">
+                <div className={`w-2 h-2 rounded-full ${isPreloaded(selectedClip.id) ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                {isPreloaded(selectedClip.id) ? 'Ready' : 'Loading'}
+              </div>
+            )}
+
+            {shouldShowPlayButton && !isBuffering && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <Button
                   size="icon"
