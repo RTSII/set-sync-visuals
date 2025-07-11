@@ -27,6 +27,8 @@ interface EditorState {
   isAudioMaster: boolean;
   trimmingClipId: string | null;
   frequencyWaveformData: FrequencyWaveformData | null;
+  isAnalyzingAudio: boolean;
+  audioAnalysisProgress: number;
 }
 
 interface EditorActions {
@@ -83,6 +85,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   isAudioMaster: true,
   trimmingClipId: null,
   frequencyWaveformData: null,
+  isAnalyzingAudio: false,
+  audioAnalysisProgress: 0,
 
   addClip: (clip) => {
     const newClip: TimelineClip = {
@@ -160,10 +164,12 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     set({ 
       audioFile: file,
       audioUrl,
-      audioSrc: audioUrl 
+      audioSrc: audioUrl,
+      isAnalyzingAudio: true,
+      audioAnalysisProgress: 0
     });
     
-    // Set loading state and immediate fallback waveform to prevent freezing
+    // Set immediate fallback waveform for instant responsiveness
     const mockWaveform = Array.from({ length: 100 }, () => Math.random() * 0.5 + 0.1);
     set({ 
       waveform: mockWaveform,
@@ -171,23 +177,28 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       frequencyWaveformData: null
     });
     
-    // Analyze audio file in the background with reduced complexity
-    setTimeout(async () => {
-      try {
-        console.log("🎵 AUDIO: Starting frequency analysis...");
-        const frequencyData = await analyzeAudioFile(file);
-        console.log("🎵 AUDIO: Frequency analysis complete");
-        
-        set({ 
-          frequencyWaveformData: frequencyData,
-          waveform: frequencyData.combined,
-          waveformData: frequencyData.combined 
-        });
-      } catch (error) {
-        console.error("🎵 AUDIO: Error analyzing audio file:", error);
-        // Keep the fallback waveform if analysis fails
-      }
-    }, 100); // Delay to prevent UI blocking
+    // Analyze audio file with progress tracking
+    try {
+      console.log("🎵 AUDIO: Starting efficient frequency analysis...");
+      const frequencyData = await analyzeAudioFile(file, (progress) => {
+        set({ audioAnalysisProgress: progress });
+      });
+      console.log("🎵 AUDIO: Frequency analysis complete");
+      
+      set({ 
+        frequencyWaveformData: frequencyData,
+        waveform: frequencyData.combined,
+        waveformData: frequencyData.combined,
+        isAnalyzingAudio: false,
+        audioAnalysisProgress: 1
+      });
+    } catch (error) {
+      console.error("🎵 AUDIO: Error analyzing audio file:", error);
+      set({ 
+        isAnalyzingAudio: false,
+        audioAnalysisProgress: 0
+      });
+    }
   },
   
   setIsExporting: (isExporting) => set({ isExporting }),

@@ -11,7 +11,7 @@ interface AudioTrackProps {
 
 const AudioTrack: React.FC<AudioTrackProps> = ({ duration, setDraggingMarkerIndex }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { waveform, audioMarkers, frequencyWaveformData } = useEditorStore();
+  const { waveform, audioMarkers, frequencyWaveformData, isAnalyzingAudio, audioAnalysisProgress } = useEditorStore();
 
   const drawFrequencyWaveform = (canvas: HTMLCanvasElement, data: FrequencyWaveformData) => {
     const context = canvas.getContext('2d');
@@ -97,6 +97,19 @@ const AudioTrack: React.FC<AudioTrackProps> = ({ duration, setDraggingMarkerInde
         {waveform.length > 0 ? (
           <>
             <canvas ref={canvasRef} className="w-full h-full" width="1200" height="40"></canvas>
+            {isAnalyzingAudio && (
+              <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded">
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="w-20 h-1 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary transition-all duration-300"
+                      style={{ width: `${audioAnalysisProgress * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-muted-foreground">Analyzing audio... {Math.round(audioAnalysisProgress * 100)}%</span>
+                </div>
+              </div>
+            )}
             {audioMarkers.map((markerTime, index) => {
               const markerPosition = duration > 0 ? `${(markerTime / duration) * 100}%` : '0%';
               return (
