@@ -163,27 +163,31 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       audioSrc: audioUrl 
     });
     
-    try {
-      // Analyze audio file for accurate frequency-separated waveform
-      console.log("🎵 AUDIO: Starting frequency analysis...");
-      const frequencyData = await analyzeAudioFile(file);
-      console.log("🎵 AUDIO: Frequency analysis complete");
-      
-      set({ 
-        frequencyWaveformData: frequencyData,
-        waveform: frequencyData.combined,
-        waveformData: frequencyData.combined 
-      });
-    } catch (error) {
-      console.error("🎵 AUDIO: Error analyzing audio file:", error);
-      // Fallback to simple waveform
-      const mockWaveform = Array.from({ length: 100 }, () => Math.random());
-      set({ 
-        waveform: mockWaveform,
-        waveformData: mockWaveform,
-        frequencyWaveformData: null
-      });
-    }
+    // Set loading state and immediate fallback waveform to prevent freezing
+    const mockWaveform = Array.from({ length: 100 }, () => Math.random() * 0.5 + 0.1);
+    set({ 
+      waveform: mockWaveform,
+      waveformData: mockWaveform,
+      frequencyWaveformData: null
+    });
+    
+    // Analyze audio file in the background with reduced complexity
+    setTimeout(async () => {
+      try {
+        console.log("🎵 AUDIO: Starting frequency analysis...");
+        const frequencyData = await analyzeAudioFile(file);
+        console.log("🎵 AUDIO: Frequency analysis complete");
+        
+        set({ 
+          frequencyWaveformData: frequencyData,
+          waveform: frequencyData.combined,
+          waveformData: frequencyData.combined 
+        });
+      } catch (error) {
+        console.error("🎵 AUDIO: Error analyzing audio file:", error);
+        // Keep the fallback waveform if analysis fails
+      }
+    }, 100); // Delay to prevent UI blocking
   },
   
   setIsExporting: (isExporting) => set({ isExporting }),
