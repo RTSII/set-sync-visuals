@@ -31,17 +31,10 @@ const VideoPreview = () => {
     isAudioMaster
   } = useEditorStore();
 
-  // Always use the first clip in timeline for thumbnail display
-  const firstClip = timelineClips.length > 0 ? timelineClips[0] : null;
-
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
   const [isBuffering, setIsBuffering] = React.useState(false);
-  const [bufferLevel, setBufferLevel] = React.useState(0);
-  const [retryCount, setRetryCount] = React.useState(0);
-  const maxRetries = 3;
   const isTransitioning = React.useRef(false);
   const transitionTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  const bufferCheckInterval = React.useRef<NodeJS.Timeout | null>(null);
 
   // Enable keyboard shortcuts and video preloading
   useKeyboardShortcuts();
@@ -105,93 +98,31 @@ const VideoPreview = () => {
     }
   };
 
-  // Enhanced clip change handler - always display first clip's thumbnail
+  // Enhanced clip change handler
   React.useEffect(() => {
-    if (videoRef.current && firstClip) {
-      // Always show the first frame of the first clip
-      const firstClipStartTime = firstClip.startTime ?? 0;
-      const firstClipEndTime = firstClip.endTime ?? firstClip.originalDuration;
-      const firstClipDuration = (firstClipEndTime || 0) - firstClipStartTime;
+    if (videoRef.current && selectedClip) {
+      const clipStartTime = selectedClip.startTime ?? 0;
+      const clipEndTime = selectedClip.endTime ?? selectedClip.originalDuration;
+      const clipDuration = (clipEndTime || 0) - clipStartTime;
 
-      console.log("🎬 FIRST-CLIP: Displaying first clip thumbnail:", firstClip.id);
-      console.log("🎬 FIRST-CLIP: Setting video to first frame at time:", firstClipStartTime);
+      console.log("🎬 CLIP-CHANGE: Selected clip changed to:", selectedClip.id);
+      console.log("🎬 CLIP-CHANGE: Clip start time:", clipStartTime, "duration:", clipDuration);
       
-      // Set video source to first clip and show first frame
-      if (videoRef.current.src !== firstClip.src) {
-        videoRef.current.src = firstClip.src;
-      }
-      
-      // Always start at 00:00 (first frame of first clip)
-      videoRef.current.currentTime = firstClipStartTime;
-      setClipDisplayDuration(firstClipDuration > 0 ? firstClipDuration : (videoRef.current.duration || 8));
+      setClipDisplayDuration(clipDuration > 0 ? clipDuration : (videoRef.current.duration || 8));
       setCurrentTime(0);
-      setAbsoluteTimelinePosition(0);
+
+      if (!isTransitioning.current) {
+        console.log("🎬 CLIP-CHANGE: Setting video time to clip start:", clipStartTime);
+        videoRef.current.currentTime = clipStartTime;
+      }
     }
-  }, [firstClip?.id, firstClip?.src, firstClip?.startTime, firstClip?.endTime, setCurrentTime, setAbsoluteTimelinePosition]);
-
-  // Buffer level monitoring
-  React.useEffect(() => {
-    if (videoRef.current) {
-      const checkBuffer = () => {
-        const video = videoRef.current;
-        if (video && video.buffered.length > 0) {
-          const currentTime = video.currentTime;
-          const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-          const bufferAhead = Math.max(0, bufferedEnd - currentTime);
-          const bufferPercentage = Math.min(100, (bufferAhead / 5) * 100); // 5 seconds ahead = 100%
-          setBufferLevel(bufferPercentage);
-          
-          // If buffer is low, show buffering indicator
-          if (bufferAhead < 2 && !video.paused) {
-            setIsBuffering(true);
-          } else if (bufferAhead > 3) {
-            setIsBuffering(false);
-          }
-        }
-      };
-
-      bufferCheckInterval.current = setInterval(checkBuffer, 1000);
-      return () => {
-        if (bufferCheckInterval.current) {
-          clearInterval(bufferCheckInterval.current);
-        }
-      };
-    }
-  }, [firstClip?.id]);
-
-  // Error handling with retry mechanism
-  const handleVideoError = React.useCallback(() => {
-    console.error("🎬 ERROR: Video failed to load, attempt:", retryCount + 1);
-    
-    if (retryCount < maxRetries && firstClip) {
-      setRetryCount(prev => prev + 1);
-      setTimeout(() => {
-        if (videoRef.current) {
-          console.log("🎬 RETRY: Retrying video load...");
-          videoRef.current.load();
-        }
-      }, 1000 * retryCount); // Exponential backoff
-    } else {
-      toast.error("Video failed to load", { 
-        description: "Please check your internet connection and try again." 
-      });
-      setIsBuffering(false);
-    }
-  }, [retryCount, maxRetries, firstClip]);
-
-  // Reset retry count when clip changes
-  React.useEffect(() => {
-    setRetryCount(0);
-  }, [firstClip?.id]);
+  }, [selectedClip?.id, selectedClip?.startTime, selectedClip?.endTime, setCurrentTime]);
 
   // Cleanup timeout on unmount
   React.useEffect(() => {
     return () => {
       if (transitionTimeoutRef.current) {
         clearTimeout(transitionTimeoutRef.current);
-      }
-      if (bufferCheckInterval.current) {
-        clearInterval(bufferCheckInterval.current);
       }
     };
   }, []);
@@ -239,11 +170,11 @@ const VideoPreview = () => {
   return (
     <div ref={previewContainerRef} className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
       <div className="bg-black flex items-center justify-center relative group overflow-hidden">
-        {firstClip ? (
+        {selectedClip ? (
           <>
             <video
               ref={videoRef}
-              src={firstClip.src}
+              src={selectedClip.src}
               className="w-full h-full object-contain"
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
@@ -256,68 +187,25 @@ const VideoPreview = () => {
                 console.log("🎬 BUFFER: Video buffering...");
                 setIsBuffering(true);
               }}
-              onCanPlay={() => {
-                console.log("🎬 BUFFER: Video can start playing");
-                setIsBuffering(false);
-              }}
               onCanPlayThrough={() => {
                 console.log("🎬 BUFFER: Video ready to play through");
                 setIsBuffering(false);
               }}
-              onLoadStart={() => {
-                console.log("🎬 BUFFER: Video load started");
-                setIsBuffering(true);
-              }}
-              onLoadedData={() => {
-                console.log("🎬 BUFFER: Video data loaded");
-                setIsBuffering(false);
-              }}
-              onSeeking={() => {
-                console.log("🎬 BUFFER: Video seeking...");
-                setIsBuffering(true);
-              }}
-              onSeeked={() => {
-                console.log("🎬 BUFFER: Video seek complete");
-                setIsBuffering(false);
-              }}
-              onError={handleVideoError}
-              onStalled={() => {
-                console.log("🎬 BUFFER: Video stalled");
-                setIsBuffering(true);
-              }}
-              onSuspend={() => {
-                console.log("🎬 BUFFER: Video suspended");
-                setIsBuffering(false);
-              }}
+              onLoadStart={() => console.log("🎬 BUFFER: Video load started")}
+              onProgress={() => console.log("🎬 BUFFER: Video loading progress")}
             />
-            {/* Enhanced Loading/Buffering Indicator */}
+            {/* Loading/Buffering Indicator */}
             {isBuffering && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/30">
-                <div className="bg-black/70 rounded-lg p-4 flex flex-col items-center gap-3">
-                  <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <div className="text-white text-sm text-center">
-                    <p>Buffering...</p>
-                    {bufferLevel > 0 && (
-                      <div className="w-32 h-1 bg-white/20 rounded-full mt-2 overflow-hidden">
-                        <div 
-                          className="h-full bg-white transition-all duration-300"
-                          style={{ width: `${bufferLevel}%` }}
-                        />
-                      </div>
-                    )}
-                    {retryCount > 0 && (
-                      <p className="text-xs text-white/70 mt-1">Retry {retryCount}/{maxRetries}</p>
-                    )}
-                  </div>
-                </div>
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
               </div>
             )}
             
             {/* Preload Status Indicator */}
-            {firstClip && (
+            {selectedClip && (
               <div className="absolute top-2 right-2 flex items-center gap-1 text-xs text-white/70 bg-black/50 px-2 py-1 rounded">
-                <div className={`w-2 h-2 rounded-full ${isPreloaded(firstClip.id) ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
-                {isPreloaded(firstClip.id) ? 'Ready' : 'Loading'}
+                <div className={`w-2 h-2 rounded-full ${isPreloaded(selectedClip.id) ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                {isPreloaded(selectedClip.id) ? 'Ready' : 'Loading'}
               </div>
             )}
 

@@ -2,7 +2,6 @@
 import { create } from 'zustand';
 import { TimelineClip } from '@/types';
 import { generateId } from './utils';
-import { FrequencyWaveformData, analyzeAudioFile } from './audioAnalysis';
 
 interface EditorState {
   clips: TimelineClip[];
@@ -26,9 +25,6 @@ interface EditorState {
   absoluteTimelinePosition: number;
   isAudioMaster: boolean;
   trimmingClipId: string | null;
-  frequencyWaveformData: FrequencyWaveformData | null;
-  isAnalyzingAudio: boolean;
-  audioAnalysisProgress: number;
 }
 
 interface EditorActions {
@@ -84,9 +80,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   absoluteTimelinePosition: 0,
   isAudioMaster: true,
   trimmingClipId: null,
-  frequencyWaveformData: null,
-  isAnalyzingAudio: false,
-  audioAnalysisProgress: 0,
 
   addClip: (clip) => {
     const newClip: TimelineClip = {
@@ -164,41 +157,15 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     set({ 
       audioFile: file,
       audioUrl,
-      audioSrc: audioUrl,
-      isAnalyzingAudio: true,
-      audioAnalysisProgress: 0
+      audioSrc: audioUrl 
     });
     
-    // Set immediate fallback waveform for instant responsiveness
-    const mockWaveform = Array.from({ length: 100 }, () => Math.random() * 0.5 + 0.1);
+    // Generate basic waveform data
+    const mockWaveform = Array.from({ length: 100 }, () => Math.random());
     set({ 
       waveform: mockWaveform,
-      waveformData: mockWaveform,
-      frequencyWaveformData: null
+      waveformData: mockWaveform 
     });
-    
-    // Analyze audio file with progress tracking
-    try {
-      console.log("🎵 AUDIO: Starting efficient frequency analysis...");
-      const frequencyData = await analyzeAudioFile(file, (progress) => {
-        set({ audioAnalysisProgress: progress });
-      });
-      console.log("🎵 AUDIO: Frequency analysis complete");
-      
-      set({ 
-        frequencyWaveformData: frequencyData,
-        waveform: frequencyData.combined,
-        waveformData: frequencyData.combined,
-        isAnalyzingAudio: false,
-        audioAnalysisProgress: 1
-      });
-    } catch (error) {
-      console.error("🎵 AUDIO: Error analyzing audio file:", error);
-      set({ 
-        isAnalyzingAudio: false,
-        audioAnalysisProgress: 0
-      });
-    }
   },
   
   setIsExporting: (isExporting) => set({ isExporting }),
@@ -248,6 +215,5 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     waveformData: [],
     waveform: [],
     audioMarkers: [],
-    frequencyWaveformData: null,
   }),
 }));
