@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { TimelineClip } from '@/types';
 import { generateId } from './utils';
+import { FrequencyWaveformData, analyzeAudioFile } from './audioAnalysis';
 
 interface EditorState {
   clips: TimelineClip[];
@@ -25,6 +26,7 @@ interface EditorState {
   absoluteTimelinePosition: number;
   isAudioMaster: boolean;
   trimmingClipId: string | null;
+  frequencyWaveformData: FrequencyWaveformData | null;
 }
 
 interface EditorActions {
@@ -80,6 +82,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   absoluteTimelinePosition: 0,
   isAudioMaster: true,
   trimmingClipId: null,
+  frequencyWaveformData: null,
 
   addClip: (clip) => {
     const newClip: TimelineClip = {
@@ -160,12 +163,27 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       audioSrc: audioUrl 
     });
     
-    // Generate basic waveform data
-    const mockWaveform = Array.from({ length: 100 }, () => Math.random());
-    set({ 
-      waveform: mockWaveform,
-      waveformData: mockWaveform 
-    });
+    try {
+      // Analyze audio file for accurate frequency-separated waveform
+      console.log("🎵 AUDIO: Starting frequency analysis...");
+      const frequencyData = await analyzeAudioFile(file);
+      console.log("🎵 AUDIO: Frequency analysis complete");
+      
+      set({ 
+        frequencyWaveformData: frequencyData,
+        waveform: frequencyData.combined,
+        waveformData: frequencyData.combined 
+      });
+    } catch (error) {
+      console.error("🎵 AUDIO: Error analyzing audio file:", error);
+      // Fallback to simple waveform
+      const mockWaveform = Array.from({ length: 100 }, () => Math.random());
+      set({ 
+        waveform: mockWaveform,
+        waveformData: mockWaveform,
+        frequencyWaveformData: null
+      });
+    }
   },
   
   setIsExporting: (isExporting) => set({ isExporting }),
@@ -215,5 +233,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     waveformData: [],
     waveform: [],
     audioMarkers: [],
+    frequencyWaveformData: null,
   }),
 }));

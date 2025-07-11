@@ -31,6 +31,9 @@ const VideoPreview = () => {
     isAudioMaster
   } = useEditorStore();
 
+  // Always use the first clip in timeline for thumbnail display
+  const firstClip = timelineClips.length > 0 ? timelineClips[0] : null;
+
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
   const [isBuffering, setIsBuffering] = React.useState(false);
   const isTransitioning = React.useRef(false);
@@ -98,25 +101,29 @@ const VideoPreview = () => {
     }
   };
 
-  // Enhanced clip change handler
+  // Enhanced clip change handler - always display first clip's thumbnail
   React.useEffect(() => {
-    if (videoRef.current && selectedClip) {
-      const clipStartTime = selectedClip.startTime ?? 0;
-      const clipEndTime = selectedClip.endTime ?? selectedClip.originalDuration;
-      const clipDuration = (clipEndTime || 0) - clipStartTime;
+    if (videoRef.current && firstClip) {
+      // Always show the first frame of the first clip
+      const firstClipStartTime = firstClip.startTime ?? 0;
+      const firstClipEndTime = firstClip.endTime ?? firstClip.originalDuration;
+      const firstClipDuration = (firstClipEndTime || 0) - firstClipStartTime;
 
-      console.log("🎬 CLIP-CHANGE: Selected clip changed to:", selectedClip.id);
-      console.log("🎬 CLIP-CHANGE: Clip start time:", clipStartTime, "duration:", clipDuration);
+      console.log("🎬 FIRST-CLIP: Displaying first clip thumbnail:", firstClip.id);
+      console.log("🎬 FIRST-CLIP: Setting video to first frame at time:", firstClipStartTime);
       
-      setClipDisplayDuration(clipDuration > 0 ? clipDuration : (videoRef.current.duration || 8));
-      setCurrentTime(0);
-
-      if (!isTransitioning.current) {
-        console.log("🎬 CLIP-CHANGE: Setting video time to clip start:", clipStartTime);
-        videoRef.current.currentTime = clipStartTime;
+      // Set video source to first clip and show first frame
+      if (videoRef.current.src !== firstClip.src) {
+        videoRef.current.src = firstClip.src;
       }
+      
+      // Always start at 00:00 (first frame of first clip)
+      videoRef.current.currentTime = firstClipStartTime;
+      setClipDisplayDuration(firstClipDuration > 0 ? firstClipDuration : (videoRef.current.duration || 8));
+      setCurrentTime(0);
+      setAbsoluteTimelinePosition(0);
     }
-  }, [selectedClip?.id, selectedClip?.startTime, selectedClip?.endTime, setCurrentTime]);
+  }, [firstClip?.id, firstClip?.src, firstClip?.startTime, firstClip?.endTime, setCurrentTime, setAbsoluteTimelinePosition]);
 
   // Cleanup timeout on unmount
   React.useEffect(() => {
@@ -170,11 +177,11 @@ const VideoPreview = () => {
   return (
     <div ref={previewContainerRef} className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
       <div className="bg-black flex items-center justify-center relative group overflow-hidden">
-        {selectedClip ? (
+        {firstClip ? (
           <>
             <video
               ref={videoRef}
-              src={selectedClip.src}
+              src={firstClip.src}
               className="w-full h-full object-contain"
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
@@ -202,10 +209,10 @@ const VideoPreview = () => {
             )}
             
             {/* Preload Status Indicator */}
-            {selectedClip && (
+            {firstClip && (
               <div className="absolute top-2 right-2 flex items-center gap-1 text-xs text-white/70 bg-black/50 px-2 py-1 rounded">
-                <div className={`w-2 h-2 rounded-full ${isPreloaded(selectedClip.id) ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
-                {isPreloaded(selectedClip.id) ? 'Ready' : 'Loading'}
+                <div className={`w-2 h-2 rounded-full ${isPreloaded(firstClip.id) ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                {isPreloaded(firstClip.id) ? 'Ready' : 'Loading'}
               </div>
             )}
 
