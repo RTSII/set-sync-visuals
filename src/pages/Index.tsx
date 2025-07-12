@@ -5,11 +5,13 @@ import MediaLibrary from "@/components/MediaLibrary";
 import Timeline from "@/components/Timeline";
 import VideoPreview from "@/components/VideoPreview";
 import WorkflowTutorial from "@/components/WorkflowTutorial";
+import { VisualizerPanel } from "@/components/VisualizerPanel";
 import { EditorProvider } from "@/context/EditorContext";
 import ProjectDashboard from "@/components/ProjectDashboard";
 import { useProjects, Project } from "@/hooks/useProjects";
 import { useEditorStore } from "@/lib/store";
 import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Index = () => {
   const [showProjects, setShowProjects] = useState(false);
@@ -96,7 +98,18 @@ const Index = () => {
           </div>
           <div className="flex-1 flex flex-col">
             <div className="flex-1">
-              <VideoPreview />
+              <Tabs defaultValue="video" className="h-full flex flex-col">
+                <TabsList className="grid w-full grid-cols-2 bg-slate-800 border-slate-700">
+                  <TabsTrigger value="video" className="data-[state=active]:bg-slate-700">Video Preview</TabsTrigger>
+                  <TabsTrigger value="visualizer" className="data-[state=active]:bg-slate-700">Audio Visualizer</TabsTrigger>
+                </TabsList>
+                <TabsContent value="video" className="flex-1 mt-0">
+                  <VideoPreview />
+                </TabsContent>
+                <TabsContent value="visualizer" className="flex-1 mt-0 p-4">
+                  <VisualizerPanel />
+                </TabsContent>
+              </Tabs>
             </div>
             <div className="h-64">
               <Timeline />
