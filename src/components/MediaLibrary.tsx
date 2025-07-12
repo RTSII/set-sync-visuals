@@ -128,7 +128,7 @@ const MediaLibrary = () => {
 
   const handleClipClick = (clip: MediaClip) => {
     addClipToTimeline(clip);
-    setSelectedClip(clip);
+    // Don't set selected clip here - store will handle selecting first clip
   };
 
   return (

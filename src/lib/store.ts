@@ -146,10 +146,17 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       ...clip,
       id: generateId(),
     };
-    set((state) => ({
-      clips: [...state.clips, newClip],
-      timelineClips: [...state.timelineClips, newClip],
-    }));
+    set((state) => {
+      const newClips = [...state.timelineClips, newClip];
+      // Always select the first clip for preview
+      const firstClip = newClips[0];
+      return {
+        clips: [...state.clips, newClip],
+        timelineClips: newClips,
+        selectedClip: firstClip,
+        selectedClipId: firstClip.id,
+      };
+    });
   },
   
   loadAudio: async (file: File) => {
