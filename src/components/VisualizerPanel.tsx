@@ -10,9 +10,8 @@ import { useEditorStore } from '@/lib/store';
 
 const VISUALIZER_EFFECTS = [
   { id: 'frequency-bars', name: 'Frequency Bars', description: 'Classic spectrum analyzer bars' },
-  { id: 'particles', name: 'Particle Storm', description: 'Audio-reactive particle system' },
-  { id: 'tunnel', name: 'Tunnel Vision', description: 'Hypnotic tunnel effect' },
-  { id: 'plasma', name: 'Plasma Field', description: 'Psychedelic plasma waves' }
+  { id: 'tunnel', name: 'Tunnel Vision', description: 'Hypnotic tunnel with geometric patterns' },
+  { id: 'plasma', name: 'Plasma Bursts', description: 'Colorful plasma bursts on black background' }
 ];
 
 export const VisualizerPanel: React.FC = () => {

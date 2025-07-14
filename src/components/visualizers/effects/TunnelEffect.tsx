@@ -44,33 +44,35 @@ export const TunnelEffect: React.FC<TunnelEffectProps> = ({ audioData }) => {
     
     ringsRef.current.forEach((ring, index) => {
       if (ring) {
-        // Move rings towards camera with kick drum acceleration
-        ring.position.z += 0.2 + subBassIntensity * 0.8 + bassIntensity * 0.3;
+        // Move rings towards camera with kick drum acceleration - geometric patterns in sync
+        const kickMovement = 0.2 + subBassIntensity * 1.2 + bassIntensity * 0.4;
+        ring.position.z += kickMovement;
         
         // Reset ring position when it passes camera
         if (ring.position.z > 5) {
           ring.position.z = -ringCount * 2;
         }
         
-        // Audio-reactive scaling - stronger reaction to kick drums
-        const scale = 1 + Math.sin(time * 2 + index * 0.2) * 0.2 + subBassIntensity * 0.8 + bassIntensity * 0.3;
-        ring.scale.setScalar(scale);
+        // Kick-reactive concentric circle scaling - geometric patterns
+        const kickScale = 1 + subBassIntensity * 1.5 + bassIntensity * 0.8;
+        const geometricPulse = Math.sin(time * 4 + index * 0.5) * 0.1;
+        ring.scale.setScalar(kickScale + geometricPulse);
         
-        // Rotating color effect
-        const hue = (time * 0.5 + index * 0.02) % 1;
-        const saturation = 0.8 + energy * 0.2;
-        const lightness = 0.4 + audioData.treble * 0.4;
+        // Much slower color transitions - 32 beats/4 bars (assuming 128 BPM = ~2 beats/sec, so 16 seconds)
+        const slowHue = (time * 0.0625 + index * 0.005) % 1; // 16x slower color cycling
+        const saturation = 0.9 + energy * 0.1;
+        const lightness = 0.5 + audioData.treble * 0.3;
         
-        (ring.material as THREE.MeshBasicMaterial).color.setHSL(hue, saturation, lightness);
+        (ring.material as THREE.MeshBasicMaterial).color.setHSL(slowHue, saturation, lightness);
         
-        // Beat-reactive rotation
-        ring.rotation.z += 0.01 + (audioData.beatDetected ? 0.1 : 0);
+        // Kick-synced rotation for geometric movement
+        ring.rotation.z += 0.005 + subBassIntensity * 0.3 + (audioData.beatDetected ? 0.15 : 0);
       }
     });
     
-    // Camera movement effect
+    // Subtle camera movement
     if (groupRef.current) {
-      groupRef.current.rotation.z += energy * 0.01;
+      groupRef.current.rotation.z += energy * 0.005;
     }
   });
 

@@ -13,7 +13,7 @@ export const PlasmaField: React.FC<PlasmaFieldProps> = ({ audioData }) => {
   const { geometry, material } = useMemo(() => {
     const geometry = new THREE.PlaneGeometry(20, 20, 128, 128);
     
-    // Plasma shader material
+    // Plasma burst shader material with black background
     const material = new THREE.ShaderMaterial({
         uniforms: {
         time: { value: 0 },
@@ -35,9 +35,10 @@ export const PlasmaField: React.FC<PlasmaFieldProps> = ({ audioData }) => {
           vUv = uv;
           vec3 pos = position;
           
-          // Kick drum reactive vertex displacement using sub-bass
-          float wave = sin(pos.x * 0.5 + time * 2.0) * sin(pos.y * 0.5 + time * 1.5);
-          pos.z += wave * (0.5 + subBass * 4.0 + bass * 2.0);
+          // Audio-reactive vertex displacement for plasma bursts
+          float burst = subBass * 3.0 + bass * 1.5;
+          float wave = sin(pos.x * 2.0 + time * 3.0) * cos(pos.y * 2.0 + time * 2.0);
+          pos.z += wave * burst * 0.8;
           
           gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
         }
@@ -59,28 +60,43 @@ export const PlasmaField: React.FC<PlasmaFieldProps> = ({ audioData }) => {
         }
         
         void main() {
-          vec2 uv = vUv;
-          float t = time * 0.5;
+          vec2 uv = vUv - 0.5; // Center UV coordinates
+          float t = time * 0.8;
           
-          // Create plasma pattern
-          float plasma = sin(uv.x * 10.0 + t) + 
-                        sin(uv.y * 12.0 + t * 1.2) + 
-                        sin((uv.x + uv.y) * 8.0 + t * 0.8) +
-                        sin(sqrt(uv.x * uv.x + uv.y * uv.y) * 15.0 + t * 2.0);
+          // Create multiple plasma burst centers
+          vec2 center1 = vec2(sin(t * 0.7) * 0.3, cos(t * 0.5) * 0.4);
+          vec2 center2 = vec2(cos(t * 1.1) * 0.4, sin(t * 0.9) * 0.3);
+          vec2 center3 = vec2(sin(t * 1.3) * 0.2, cos(t * 1.7) * 0.5);
           
-          // Audio reactivity - emphasize kick drums (sub-bass)
-          plasma += subBass * 5.0 * sin(uv.x * 25.0 + t * 4.0); // Strong kick reaction
-          plasma += bass * 3.0 * sin(uv.x * 20.0 + t * 3.0);    // Bass synths
-          plasma += mid * 2.0 * sin(uv.y * 15.0 + t * 2.0);     // Snares/hats
-          plasma += treble * 1.5 * sin((uv.x + uv.y) * 25.0 + t * 4.0); // Cymbals
+          // Distance-based plasma bursts
+          float dist1 = length(uv - center1);
+          float dist2 = length(uv - center2);
+          float dist3 = length(uv - center3);
           
-          // Beat pulse - stronger kick reaction
-          plasma += beat * 3.0;
+          // Audio-reactive plasma intensity
+          float kickBurst = subBass * 8.0 + beat * 4.0;
+          float bassBurst = bass * 5.0;
+          float midBurst = mid * 3.0;
           
-          // Convert to color with kick-reactive hue shift
-          float hue = plasma * 0.1 + time * 0.2 + energy * 0.5 + subBass * 0.8;
-          float saturation = 0.8 + energy * 0.2;
-          float brightness = 0.5 + energy * 0.3 + abs(sin(plasma * 0.5)) * 0.3;
+          // Create plasma bursts with audio reactivity
+          float plasma1 = sin(dist1 * 15.0 - t * 4.0 + kickBurst) * exp(-dist1 * 2.0);
+          float plasma2 = sin(dist2 * 12.0 - t * 3.0 + bassBurst) * exp(-dist2 * 3.0);
+          float plasma3 = sin(dist3 * 18.0 - t * 5.0 + midBurst) * exp(-dist3 * 2.5);
+          
+          // Combine plasma bursts
+          float totalPlasma = plasma1 + plasma2 + plasma3;
+          
+          // Add treble-reactive sparkles
+          float sparkle = treble * 2.0 * sin(uv.x * 50.0 + t * 6.0) * sin(uv.y * 50.0 + t * 4.0);
+          totalPlasma += sparkle * 0.3;
+          
+          // Color mapping for bursts
+          float hue = totalPlasma * 0.2 + t * 0.3 + energy * 0.4;
+          float saturation = 0.9;
+          float brightness = max(0.0, totalPlasma) * (0.8 + energy * 0.2);
+          
+          // Black background - only show bright plasma areas
+          brightness = smoothstep(0.1, 0.8, brightness);
           
           vec3 color = hsv2rgb(vec3(hue, saturation, brightness));
           

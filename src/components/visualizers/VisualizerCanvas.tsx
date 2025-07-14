@@ -2,7 +2,6 @@ import React, { useRef, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { AudioAnalysisData } from '@/hooks/useAudioAnalysis';
 import { FrequencyBars } from './effects/FrequencyBars';
-import { ParticleSystem } from './effects/ParticleSystem';
 import { TunnelEffect } from './effects/TunnelEffect';
 import { PlasmaField } from './effects/PlasmaField';
 
@@ -25,8 +24,6 @@ export const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({
     switch (effect) {
       case 'frequency-bars':
         return <FrequencyBars audioData={audioData} />;
-      case 'particles':
-        return <ParticleSystem audioData={audioData} />;
       case 'tunnel':
         return <TunnelEffect audioData={audioData} />;
       case 'plasma':
