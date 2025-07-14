@@ -61,46 +61,58 @@ export const PlasmaField: React.FC<PlasmaFieldProps> = ({ audioData }) => {
         
         void main() {
           vec2 uv = vUv - 0.5; // Center UV coordinates
-          float t = time * 0.8;
+          float t = time * 0.5;
           
-          // Create multiple plasma burst centers
-          vec2 center1 = vec2(sin(t * 0.7) * 0.3, cos(t * 0.5) * 0.4);
-          vec2 center2 = vec2(cos(t * 1.1) * 0.4, sin(t * 0.9) * 0.3);
-          vec2 center3 = vec2(sin(t * 1.3) * 0.2, cos(t * 1.7) * 0.5);
+          // Create distinct burst centers for different frequency ranges
+          vec2 kickCenter = vec2(sin(t * 0.3) * 0.4, cos(t * 0.4) * 0.3);
+          vec2 bassCenter = vec2(cos(t * 0.6) * 0.3, sin(t * 0.5) * 0.4);
+          vec2 midCenter = vec2(sin(t * 0.8) * 0.2, cos(t * 0.7) * 0.2);
+          vec2 trebleCenter = vec2(cos(t * 1.2) * 0.15, sin(t * 1.1) * 0.15);
           
-          // Distance-based plasma bursts
-          float dist1 = length(uv - center1);
-          float dist2 = length(uv - center2);
-          float dist3 = length(uv - center3);
+          // Distance calculations
+          float kickDist = length(uv - kickCenter);
+          float bassDist = length(uv - bassCenter);
+          float midDist = length(uv - midCenter);
+          float trebleDist = length(uv - trebleCenter);
           
-          // Audio-reactive plasma intensity
-          float kickBurst = subBass * 8.0 + beat * 4.0;
-          float bassBurst = bass * 5.0;
-          float midBurst = mid * 3.0;
+          // Audio-reactive burst intensities
+          float kickIntensity = (subBass * 12.0 + beat * 8.0);
+          float bassIntensity = bass * 10.0;
+          float midIntensity = mid * 6.0;
+          float trebleIntensity = treble * 4.0;
           
-          // Create plasma bursts with audio reactivity
-          float plasma1 = sin(dist1 * 15.0 - t * 4.0 + kickBurst) * exp(-dist1 * 2.0);
-          float plasma2 = sin(dist2 * 12.0 - t * 3.0 + bassBurst) * exp(-dist2 * 3.0);
-          float plasma3 = sin(dist3 * 18.0 - t * 5.0 + midBurst) * exp(-dist3 * 2.5);
+          // Create distinct plasma bursts for each frequency range
+          float kickBurst = kickIntensity * sin(kickDist * 8.0 - t * 3.0) * exp(-kickDist * 1.5);
+          float bassBurst = bassIntensity * sin(bassDist * 10.0 - t * 4.0) * exp(-bassDist * 2.0);
+          float midBurst = midIntensity * sin(midDist * 15.0 - t * 5.0) * exp(-midDist * 3.0);
+          float trebleBurst = trebleIntensity * sin(trebleDist * 25.0 - t * 8.0) * exp(-trebleDist * 4.0);
           
-          // Combine plasma bursts
-          float totalPlasma = plasma1 + plasma2 + plasma3;
+          // Color mapping for different frequency ranges
+          vec3 kickColor = vec3(1.0, 0.3, 0.0);    // Red-orange for kick/sub-bass
+          vec3 bassColor = vec3(1.0, 0.8, 0.0);    // Yellow for bass
+          vec3 midColor = vec3(0.0, 1.0, 0.3);     // Green for mids
+          vec3 trebleColor = vec3(0.3, 0.7, 1.0);  // Blue for treble
           
-          // Add treble-reactive sparkles
-          float sparkle = treble * 2.0 * sin(uv.x * 50.0 + t * 6.0) * sin(uv.y * 50.0 + t * 4.0);
-          totalPlasma += sparkle * 0.3;
+          // Combine colored bursts
+          vec3 finalColor = vec3(0.0);
+          finalColor += kickColor * max(0.0, kickBurst);
+          finalColor += bassColor * max(0.0, bassBurst);
+          finalColor += midColor * max(0.0, midBurst);
+          finalColor += trebleColor * max(0.0, trebleBurst);
           
-          // Color mapping for bursts
-          float hue = totalPlasma * 0.2 + t * 0.3 + energy * 0.4;
-          float saturation = 0.9;
-          float brightness = max(0.0, totalPlasma) * (0.8 + energy * 0.2);
+          // Add ambient plasma when no audio
+          float ambientPlasma = 0.3 * sin(length(uv) * 5.0 - t * 2.0) * exp(-length(uv) * 1.0);
+          finalColor += vec3(1.0, 0.8, 0.2) * max(0.0, ambientPlasma);
           
-          // Black background - only show bright plasma areas
-          brightness = smoothstep(0.1, 0.8, brightness);
+          // Enhanced glow effect
+          float glow = length(finalColor);
+          finalColor += finalColor * glow * 0.5;
           
-          vec3 color = hsv2rgb(vec3(hue, saturation, brightness));
+          // Black background with smooth falloff
+          float brightness = length(finalColor);
+          brightness = smoothstep(0.05, 0.6, brightness);
           
-          gl_FragColor = vec4(color, 1.0);
+          gl_FragColor = vec4(finalColor * brightness, 1.0);
         }
       `,
       transparent: true
