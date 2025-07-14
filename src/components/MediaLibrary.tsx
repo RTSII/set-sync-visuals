@@ -55,13 +55,22 @@ const MediaLibrary = () => {
   };
 
   useEffect(() => {
-    mediaClips.forEach(async (clip) => {
-      if (!thumbnailCache[clip.id]) {
-        const thumbnail = await generateThumbnail(clip);
-        setThumbnailCache(prev => ({ ...prev, [clip.id]: thumbnail }));
+    const generateThumbnails = async () => {
+      for (const clip of mediaClips) {
+        if (!thumbnailCache[clip.id]) {
+          try {
+            const thumbnail = await generateThumbnail(clip);
+            setThumbnailCache(prev => ({ ...prev, [clip.id]: thumbnail }));
+          } catch (error) {
+            console.error('Failed to generate thumbnail for clip:', clip.id, error);
+            setThumbnailCache(prev => ({ ...prev, [clip.id]: "data:," }));
+          }
+        }
       }
-    });
-  }, [mediaClips, thumbnailCache]);
+    };
+
+    generateThumbnails();
+  }, [mediaClips]);
 
   const handleUploadVideoClick = () => {
     videoInputRef.current?.click();
@@ -126,9 +135,10 @@ const MediaLibrary = () => {
     e.dataTransfer.setData("application/rvj-clip", JSON.stringify(clip));
   };
 
-  const handleClipClick = (clip: MediaClip) => {
+  const handleClipClick = (e: React.MouseEvent, clip: MediaClip) => {
+    e.preventDefault();
+    e.stopPropagation();
     addClipToTimeline(clip);
-    // Don't set selected clip here - store will handle selecting first clip
   };
 
   return (
@@ -145,7 +155,7 @@ const MediaLibrary = () => {
                   key={clip.id}
                   className="relative aspect-video bg-muted rounded border-2 border-transparent hover:border-primary transition-colors cursor-pointer group"
                   draggable
-                  onClick={() => handleClipClick(clip)}
+                  onClick={(e) => handleClipClick(e, clip)}
                   onDragStart={(e) => handleClipDragStart(e, clip, index)}
                   onDragEnter={() => (dragOverItem.current = index)}
                   onDragEnd={handleDragSort}
