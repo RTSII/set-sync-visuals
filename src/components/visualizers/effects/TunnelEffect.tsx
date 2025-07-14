@@ -37,21 +37,23 @@ export const TunnelEffect: React.FC<TunnelEffectProps> = ({ audioData }) => {
     if (!audioData || !groupRef.current) return;
     
     const time = state.clock.elapsedTime;
+    // Use sub-bass for kick drum detection and bass for bass synths
+    const subBassIntensity = audioData.subBass;
     const bassIntensity = audioData.bass;
     const energy = audioData.energy;
     
     ringsRef.current.forEach((ring, index) => {
       if (ring) {
-        // Move rings towards camera
-        ring.position.z += 0.2 + bassIntensity * 0.5;
+        // Move rings towards camera with kick drum acceleration
+        ring.position.z += 0.2 + subBassIntensity * 0.8 + bassIntensity * 0.3;
         
         // Reset ring position when it passes camera
         if (ring.position.z > 5) {
           ring.position.z = -ringCount * 2;
         }
         
-        // Audio-reactive scaling
-        const scale = 1 + Math.sin(time * 2 + index * 0.2) * 0.2 + bassIntensity * 0.5;
+        // Audio-reactive scaling - stronger reaction to kick drums
+        const scale = 1 + Math.sin(time * 2 + index * 0.2) * 0.2 + subBassIntensity * 0.8 + bassIntensity * 0.3;
         ring.scale.setScalar(scale);
         
         // Rotating color effect

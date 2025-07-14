@@ -69,16 +69,19 @@ export const ParticleSystem: React.FC<ParticleSystemProps> = ({ audioData }) => 
     const positions = positionAttribute.array as Float32Array;
     const colors = colorAttribute.array as Float32Array;
     
-    const bassIntensity = audioData.bass * 5;
+    // Use sub-bass for kick drum reactivity
+    const subBassIntensity = audioData.subBass * 8; // Stronger reaction to kick drums
+    const bassIntensity = audioData.bass * 3;
     const energy = audioData.energy;
     
     for (let i = 0; i < particleCount; i++) {
       const i3 = i * 3;
       
-      // Update positions with audio-reactive movement
-      positions[i3] += velocities[i3] * (1 + bassIntensity);
-      positions[i3 + 1] += velocities[i3 + 1] * (1 + bassIntensity);
-      positions[i3 + 2] += velocities[i3 + 2] * (1 + bassIntensity);
+      // Update positions with kick drum reactivity (sub-bass)
+      const movement = 1 + subBassIntensity + bassIntensity;
+      positions[i3] += velocities[i3] * movement;
+      positions[i3 + 1] += velocities[i3 + 1] * movement;
+      positions[i3 + 2] += velocities[i3 + 2] * movement;
       
       // Boundary wrapping
       if (Math.abs(positions[i3]) > 15) velocities[i3] *= -1;

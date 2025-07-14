@@ -3,9 +3,10 @@ import { useEffect, useRef, useState } from 'react';
 export interface AudioAnalysisData {
   frequencyData: Uint8Array;
   timeData: Uint8Array;
-  bass: number;
-  mid: number;
-  treble: number;
+  subBass: number;  // 20-60 Hz (kick drums)
+  bass: number;     // 60-250 Hz (bass synths)
+  mid: number;      // 250-2000 Hz (snares, hats)
+  treble: number;   // 2000+ Hz (cymbals, air)
   energy: number;
   beatDetected: boolean;
 }
@@ -62,20 +63,43 @@ export const useAudioAnalysis = (audioElement: HTMLAudioElement | null) => {
         analyserRef.current.getByteFrequencyData(frequencyData);
         analyserRef.current.getByteTimeDomainData(timeData);
         
-        // Calculate frequency ranges
-        const bass = getFrequencyRange(frequencyData, 0, 60);
-        const mid = getFrequencyRange(frequencyData, 60, 180);
-        const treble = getFrequencyRange(frequencyData, 180, bufferLength);
+        // Calculate frequency ranges using proper Hz-to-bin conversion
+        const sampleRate = audioContextRef.current?.sampleRate || 44100;
+        const nyquist = sampleRate / 2;
+        const binSize = nyquist / bufferLength;
+        
+        // Electronic music frequency ranges (optimized for kick/bass detection)
+        // Sub-bass: 20-60 Hz (kick drum fundamentals)
+        // Bass: 60-250 Hz (bass synths, kick harmonics) 
+        // Low-mids: 250-500 Hz (snare fundamentals, bass harmonics)
+        // Mids: 500-2000 Hz (snare, hats, melodic content)
+        // High-mids: 2000-6000 Hz (hi-hats, cymbals, presence)
+        // Treble: 6000+ Hz (air, brightness)
+        
+        const subBassBin = Math.floor(60 / binSize);
+        const bassBin = Math.floor(250 / binSize);
+        const midBin = Math.floor(2000 / binSize);
+        const trebleBin = Math.floor(6000 / binSize);
+        
+        // Focus on sub-bass for kick detection (20-60 Hz)
+        const subBass = getFrequencyRange(frequencyData, Math.floor(20 / binSize), subBassBin);
+        // Bass range for bass synths (60-250 Hz)
+        const bass = getFrequencyRange(frequencyData, subBassBin, bassBin);
+        // Mid range for snares/hats (250-2000 Hz)
+        const mid = getFrequencyRange(frequencyData, bassBin, midBin);
+        // Treble for cymbals/air (2000+ Hz)
+        const treble = getFrequencyRange(frequencyData, midBin, Math.min(trebleBin, bufferLength));
         
         // Calculate overall energy
         const energy = frequencyData.reduce((sum, value) => sum + value, 0) / bufferLength / 255;
         
-        // Beat detection
-        const beatDetected = detectBeat(bass);
+        // Beat detection using sub-bass for kick drums (20-60 Hz)
+        const beatDetected = detectBeat(subBass);
         
         setAnalysisData({
           frequencyData: new Uint8Array(frequencyData),
           timeData: new Uint8Array(timeData),
+          subBass,
           bass,
           mid,
           treble,
@@ -94,23 +118,30 @@ export const useAudioAnalysis = (audioElement: HTMLAudioElement | null) => {
       return slice.reduce((sum, value) => sum + value, 0) / slice.length / 255;
     };
 
-    const detectBeat = (bassLevel: number): boolean => {
+    const detectBeat = (subBassLevel: number): boolean => {
       const now = Date.now();
       const history = bassHistoryRef.current;
       
-      // Add current bass level to history
-      history.push(bassLevel);
-      if (history.length > 20) history.shift();
+      // Add current sub-bass level to history (for kick detection)
+      history.push(subBassLevel);
+      if (history.length > 15) history.shift(); // Shorter history for faster response
       
-      // Calculate average
+      // Calculate average and variance for better threshold
       const average = history.reduce((sum, val) => sum + val, 0) / history.length;
+      const variance = history.reduce((sum, val) => sum + Math.pow(val - average, 2), 0) / history.length;
+      const standardDev = Math.sqrt(variance);
       
-      // Beat detected if current bass is significantly higher than average
-      // and enough time has passed since last beat
-      const threshold = average * 1.3;
+      // Dynamic threshold based on variance (more sensitive in quiet parts)
+      const dynamicThreshold = average + Math.max(standardDev * 1.5, average * 0.15);
+      
+      // Minimum time between beats for "four on the floor" patterns (120-140 BPM typical)
+      // 120 BPM = 500ms, 140 BPM = 428ms, so 400ms is a good minimum
       const timeSinceLastBeat = now - lastBeatTimeRef.current;
+      const minBeatInterval = 350; // Allow slightly faster detection
       
-      if (bassLevel > threshold && timeSinceLastBeat > 200) {
+      // Beat detected if current level exceeds dynamic threshold
+      // and sufficient time has passed since last beat
+      if (subBassLevel > dynamicThreshold && timeSinceLastBeat > minBeatInterval) {
         lastBeatTimeRef.current = now;
         return true;
       }

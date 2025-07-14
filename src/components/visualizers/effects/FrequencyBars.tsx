@@ -56,9 +56,15 @@ export const FrequencyBars: React.FC<FrequencyBarsProps> = ({ audioData }) => {
       }
     });
     
-    // Rotate the entire group for dynamic effect
+    // Rotate the entire group based on sub-bass (kick drums)
     if (groupRef.current) {
-      groupRef.current.rotation.y += audioData.energy * 0.02;
+      groupRef.current.rotation.y += audioData.subBass * 0.03;
+      // Add beat-reactive zoom effect
+      if (audioData.beatDetected) {
+        groupRef.current.scale.setScalar(1.2);
+      } else {
+        groupRef.current.scale.lerp({ x: 1, y: 1, z: 1 } as any, 0.1);
+      }
     }
   });
 

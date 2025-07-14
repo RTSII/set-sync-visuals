@@ -15,8 +15,9 @@ export const PlasmaField: React.FC<PlasmaFieldProps> = ({ audioData }) => {
     
     // Plasma shader material
     const material = new THREE.ShaderMaterial({
-      uniforms: {
+        uniforms: {
         time: { value: 0 },
+        subBass: { value: 0 },
         bass: { value: 0 },
         mid: { value: 0 },
         treble: { value: 0 },
@@ -26,6 +27,7 @@ export const PlasmaField: React.FC<PlasmaFieldProps> = ({ audioData }) => {
       vertexShader: `
         varying vec2 vUv;
         uniform float time;
+        uniform float subBass;
         uniform float bass;
         uniform float energy;
         
@@ -33,9 +35,9 @@ export const PlasmaField: React.FC<PlasmaFieldProps> = ({ audioData }) => {
           vUv = uv;
           vec3 pos = position;
           
-          // Audio-reactive vertex displacement
+          // Kick drum reactive vertex displacement using sub-bass
           float wave = sin(pos.x * 0.5 + time * 2.0) * sin(pos.y * 0.5 + time * 1.5);
-          pos.z += wave * (0.5 + bass * 2.0);
+          pos.z += wave * (0.5 + subBass * 4.0 + bass * 2.0);
           
           gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
         }
@@ -43,6 +45,7 @@ export const PlasmaField: React.FC<PlasmaFieldProps> = ({ audioData }) => {
       fragmentShader: `
         varying vec2 vUv;
         uniform float time;
+        uniform float subBass;
         uniform float bass;
         uniform float mid;
         uniform float treble;
@@ -65,16 +68,17 @@ export const PlasmaField: React.FC<PlasmaFieldProps> = ({ audioData }) => {
                         sin((uv.x + uv.y) * 8.0 + t * 0.8) +
                         sin(sqrt(uv.x * uv.x + uv.y * uv.y) * 15.0 + t * 2.0);
           
-          // Audio reactivity
-          plasma += bass * 3.0 * sin(uv.x * 20.0 + t * 3.0);
-          plasma += mid * 2.0 * sin(uv.y * 15.0 + t * 2.0);
-          plasma += treble * 1.5 * sin((uv.x + uv.y) * 25.0 + t * 4.0);
+          // Audio reactivity - emphasize kick drums (sub-bass)
+          plasma += subBass * 5.0 * sin(uv.x * 25.0 + t * 4.0); // Strong kick reaction
+          plasma += bass * 3.0 * sin(uv.x * 20.0 + t * 3.0);    // Bass synths
+          plasma += mid * 2.0 * sin(uv.y * 15.0 + t * 2.0);     // Snares/hats
+          plasma += treble * 1.5 * sin((uv.x + uv.y) * 25.0 + t * 4.0); // Cymbals
           
-          // Beat pulse
-          plasma += beat * 2.0;
+          // Beat pulse - stronger kick reaction
+          plasma += beat * 3.0;
           
-          // Convert to color
-          float hue = plasma * 0.1 + time * 0.2 + energy * 0.5;
+          // Convert to color with kick-reactive hue shift
+          float hue = plasma * 0.1 + time * 0.2 + energy * 0.5 + subBass * 0.8;
           float saturation = 0.8 + energy * 0.2;
           float brightness = 0.5 + energy * 0.3 + abs(sin(plasma * 0.5)) * 0.3;
           
@@ -97,6 +101,7 @@ export const PlasmaField: React.FC<PlasmaFieldProps> = ({ audioData }) => {
     
     // Update shader uniforms with audio data
     material.uniforms.time.value = time;
+    material.uniforms.subBass.value = audioData.subBass;
     material.uniforms.bass.value = audioData.bass;
     material.uniforms.mid.value = audioData.mid;
     material.uniforms.treble.value = audioData.treble;
