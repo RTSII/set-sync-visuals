@@ -12,7 +12,7 @@ const MediaLibrary = () => {
   const audioInputRef = useRef<HTMLInputElement>(null);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
-  const { addClipToTimeline, loadAudio, setSelectedClip } = useEditorStore();
+  const { addClipToTimeline, loadAudio, setSelectedClip, timelineClips } = useEditorStore();
 
   const generateThumbnail = (clip: MediaClip): Promise<string> => {
     return new Promise((resolve) => {
@@ -141,6 +141,10 @@ const MediaLibrary = () => {
     addClipToTimeline(clip);
   };
 
+  const isClipInTimeline = (clipSrc: string) => {
+    return timelineClips.some(timelineClip => timelineClip.src === clipSrc);
+  };
+
   return (
     <Card className="h-full flex flex-col overflow-hidden">
       <CardHeader className="p-3 pb-2">
@@ -153,7 +157,7 @@ const MediaLibrary = () => {
               {mediaClips.map((clip, index) => (
                 <div
                   key={clip.id}
-                  className="relative aspect-video bg-muted rounded border-2 border-transparent hover:border-primary transition-colors cursor-pointer group"
+                  className={`relative aspect-video bg-muted rounded border-2 ${isClipInTimeline(clip.src) ? 'border-[hsl(var(--fuscia))] bg-[hsl(var(--fuscia))]/10' : 'border-transparent'} hover:border-primary transition-colors cursor-pointer group`}
                   draggable
                   onClick={(e) => handleClipClick(e, clip)}
                   onDragStart={(e) => handleClipDragStart(e, clip, index)}
