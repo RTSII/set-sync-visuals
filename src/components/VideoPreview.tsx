@@ -169,7 +169,7 @@ const VideoPreview = () => {
 
   return (
     <div ref={previewContainerRef} className="bg-card border border-border rounded-lg overflow-hidden grid grid-rows-[1fr_auto] h-full">
-      <div className="bg-black flex items-center justify-center relative group overflow-hidden">
+      <div className="bg-black flex items-center justify-center relative group overflow-hidden min-h-0">
         {selectedClip ? (
           <>
             <video
