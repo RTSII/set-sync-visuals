@@ -201,7 +201,7 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
               style={{ width: `${STANDARD_CLIP_WIDTH}px` }}
             >
               <div
-                className={`w-full h-full rounded-sm relative overflow-hidden cursor-pointer active:cursor-grabbing border-2 ${selectedClip?.id === clip.id && !trimmingClipId ? 'border-primary bg-primary/20' : 'border-muted bg-muted'} hover:bg-primary/10 transition-colors`}
+                className={`w-full h-full rounded-sm relative overflow-hidden cursor-pointer active:cursor-grabbing border-2 ${selectedClip?.id === clip.id && !trimmingClipId ? 'border-primary bg-primary/20' : 'border-[hsl(var(--fuscia))] bg-[hsl(var(--fuscia))]/10'} hover:bg-primary/10 transition-colors`}
                 draggable
                 onClick={() => setSelectedClip(clip)}
                 onDoubleClick={(e) => handleDoubleClick(e, clip.id)}

@@ -180,9 +180,10 @@ const VideoPreview = () => {
               onLoadedMetadata={handleLoadedMetadata}
               onEnded={handleVideoEnded}
               onClick={togglePlay}
-              preload="auto"
+              preload="metadata"
               playsInline
               muted={false}
+              key={selectedClip.id}
               onWaiting={() => {
                 console.log("🎬 BUFFER: Video buffering...");
                 setIsBuffering(true);

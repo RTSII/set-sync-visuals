@@ -32,6 +32,8 @@
     --border: 217 33% 13%; /* More subtle border */
     --input: 217 33% 13%;
     --ring: 217 91% 60%;
+    
+    --fuscia: 300 76% 72%; /* Fuscia purple for special highlights */
 
     --radius: 0.5rem;
   }
@@ -48,6 +50,7 @@
     --primary-foreground: 210 40% 98%;
     --secondary: 217 33% 15%;
     --secondary-foreground: 210 40% 98%;
+    --fuscia: 300 76% 72%;
     --muted: 217 33% 15%;
     --muted-foreground: 215 20% 55%;
     --accent: 217 91% 60%;
