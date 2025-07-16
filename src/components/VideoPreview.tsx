@@ -10,7 +10,6 @@ import { toast } from "sonner";
 
 const VideoPreview = () => {
   const previewContainerRef = React.useRef<HTMLDivElement>(null);
-  const nextVideoRef = React.useRef<HTMLVideoElement>(null);
   const {
     videoRef,
     togglePlay,
@@ -34,81 +33,32 @@ const VideoPreview = () => {
 
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
   const [isBuffering, setIsBuffering] = React.useState(false);
-  const [isTransitioning, setIsTransitioning] = React.useState(false);
-  const [transitionProgress, setTransitionProgress] = React.useState(0);
+  const isTransitioning = React.useRef(false);
   const transitionTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  const nextClipRef = React.useRef<any>(null);
 
   // Enable keyboard shortcuts and video preloading
   useKeyboardShortcuts();
   const { isPreloaded } = useVideoPreloader(timelineClips, selectedClip?.id);
 
-  const startTransition = (nextClip: any) => {
-    if (isTransitioning || !videoRef.current) return;
-    
-    console.log("🎬 TRANSITION: Starting crossfade to", nextClip.id);
-    setIsTransitioning(true);
-    nextClipRef.current = nextClip;
-    
-    // Pause current video at its last frame
-    videoRef.current.pause();
-    
-    // Preload next video
-    if (nextVideoRef.current) {
-      nextVideoRef.current.src = nextClip.src;
-      nextVideoRef.current.currentTime = nextClip.startTime ?? 0;
-      nextVideoRef.current.load();
-      
-      nextVideoRef.current.addEventListener('canplaythrough', () => {
-        // Start crossfade animation
-        let progress = 0;
-        const fadeInterval = setInterval(() => {
-          progress += 0.05; // 20 frames at 60fps = ~333ms transition
-          setTransitionProgress(progress);
-          
-          if (progress >= 1) {
-            clearInterval(fadeInterval);
-            completeTransition();
-          }
-        }, 16); // ~60fps
-      }, { once: true });
-    }
-  };
-
-  const completeTransition = () => {
-    if (!nextClipRef.current) return;
-    
-    console.log("🎬 TRANSITION: Completing crossfade");
-    
-    // Swap video elements and resume playback
-    const wasPlaying = isPlaying;
-    handleClipEnded(); // This handles the clip state change
-    
-    if (wasPlaying && videoRef.current) {
-      videoRef.current.play().catch(console.error);
-    }
-    
-    // Reset transition state
-    setIsTransitioning(false);
-    setTransitionProgress(0);
-    nextClipRef.current = null;
-  };
-
   const handleTimeUpdate = () => {
-    if (videoRef.current && selectedClip && !isTransitioning) {
+    if (videoRef.current && selectedClip && !isTransitioning.current) {
       const videoCurrentTime = videoRef.current.currentTime;
       const clipStartTime = selectedClip.startTime ?? 0;
       const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
 
-      if (clipEndTime && videoCurrentTime >= clipEndTime - 0.1) {
-        // Check if there's a next clip for transition
-        const currentIndex = timelineClips.findIndex(c => c.id === selectedClip.id);
-        if (currentIndex >= 0 && currentIndex < timelineClips.length - 1) {
-          const nextClip = timelineClips[currentIndex + 1];
-          startTransition(nextClip);
-        } else {
-          handleClipEnded(); // End of timeline
+      if (clipEndTime && videoCurrentTime >= clipEndTime - 0.02) {
+        console.log("🎬 TIME-UPDATE: Clip reached end, triggering seamless transition");
+        isTransitioning.current = true;
+        
+        if (transitionTimeoutRef.current) {
+          clearTimeout(transitionTimeoutRef.current);
         }
+        
+        handleClipEnded();
+        
+        transitionTimeoutRef.current = setTimeout(() => {
+          isTransitioning.current = false;
+        }, 500);
       } else {
         const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
         setCurrentTime(relativeTime);
@@ -143,7 +93,7 @@ const VideoPreview = () => {
 
   const handleVideoEnded = () => {
     console.log("🎬 VIDEO-END: Video element ended event");
-    if (!isTransitioning) {
+    if (!isTransitioning.current) {
       handleClipEnded();
     }
   };
@@ -161,7 +111,7 @@ const VideoPreview = () => {
       setClipDisplayDuration(clipDuration > 0 ? clipDuration : (videoRef.current.duration || 8));
       setCurrentTime(0);
 
-      if (!isTransitioning) {
+      if (!isTransitioning.current) {
         console.log("🎬 CLIP-CHANGE: Setting video time to clip start:", clipStartTime);
         videoRef.current.currentTime = clipStartTime;
       }
@@ -214,7 +164,7 @@ const VideoPreview = () => {
   const currentClipIndex = selectedClip ? timelineClips.findIndex(c => c.id === selectedClip.id) + 1 : 0;
   const totalClips = timelineClips.length;
   const videoIsPlaying = videoRef.current ? !videoRef.current.paused : false;
-  const shouldShowPlayButton = !videoIsPlaying && !isTransitioning;
+  const shouldShowPlayButton = !videoIsPlaying && !isTransitioning.current;
   const progressPercentage = clipDisplayDuration > 0 ? Math.min(100, (currentTime / clipDisplayDuration) * 100) : 0;
 
   return (
@@ -225,8 +175,7 @@ const VideoPreview = () => {
             <video
               ref={videoRef}
               src={selectedClip.src}
-              className="w-full h-full object-contain transition-opacity duration-300"
-              style={{ opacity: isTransitioning ? 1 - transitionProgress : 1 }}
+              className="w-full h-full object-contain"
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
               onEnded={handleVideoEnded}
@@ -245,19 +194,6 @@ const VideoPreview = () => {
               onLoadStart={() => console.log("🎬 BUFFER: Video load started")}
               onProgress={() => console.log("🎬 BUFFER: Video loading progress")}
             />
-            
-            {/* Next video for seamless transitions */}
-            {isTransitioning && nextClipRef.current && (
-              <video
-                ref={nextVideoRef}
-                src={nextClipRef.current.src}
-                className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300"
-                style={{ opacity: transitionProgress }}
-                preload="auto"
-                playsInline
-                muted={false}
-              />
-            )}
             {/* Loading/Buffering Indicator */}
             {isBuffering && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -265,16 +201,8 @@ const VideoPreview = () => {
               </div>
             )}
             
-            {/* Transition Indicator */}
-            {isTransitioning && (
-              <div className="absolute top-2 left-2 flex items-center gap-1 text-xs text-white/90 bg-blue-600/80 px-2 py-1 rounded">
-                <div className="w-2 h-2 rounded-full bg-blue-300 animate-pulse"></div>
-                Transitioning...
-              </div>
-            )}
-            
             {/* Preload Status Indicator */}
-            {selectedClip && !isTransitioning && (
+            {selectedClip && (
               <div className="absolute top-2 right-2 flex items-center gap-1 text-xs text-white/70 bg-black/50 px-2 py-1 rounded">
                 <div className={`w-2 h-2 rounded-full ${isPreloaded(selectedClip.id) ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
                 {isPreloaded(selectedClip.id) ? 'Ready' : 'Loading'}
