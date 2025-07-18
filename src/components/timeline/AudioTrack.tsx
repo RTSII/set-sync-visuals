@@ -46,15 +46,14 @@ const AudioTrack: React.FC<AudioTrackProps> = ({ duration, setDraggingMarkerInde
   }, [waveform]);
 
   return (
-    <div className="relative">
-      <div className="flex items-center gap-2 mb-2">
-        <AudioWaveform className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground font-medium">Audio Track</span>
+    <div className="h-12 bg-secondary/30 rounded-md p-1 flex items-center gap-1">
+      <div className="w-6 h-full flex items-center justify-center bg-muted rounded flex-shrink-0">
+          <AudioWaveform className="h-3 w-3 text-foreground"/>
       </div>
-      <div className="h-32 bg-secondary/30 border border-border/30 rounded-md relative">
+      <div className="flex-1 h-full relative bg-muted/30 rounded">
         {waveform.length > 0 ? (
           <>
-            <canvas ref={canvasRef} className="w-full h-full rounded-md" width="1200" height="128"></canvas>
+            <canvas ref={canvasRef} className="w-full h-full" width="1200" height="40"></canvas>
             {audioMarkers.map((markerTime, index) => {
               const markerPosition = duration > 0 ? `${(markerTime / duration) * 100}%` : '0%';
               return (
@@ -72,8 +71,8 @@ const AudioTrack: React.FC<AudioTrackProps> = ({ duration, setDraggingMarkerInde
             })}
           </>
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-center p-4">
-              <p className="text-muted-foreground text-sm">Upload audio to generate waveform</p>
+          <div className="w-full h-full flex items-center justify-center text-center p-1">
+              <p className="text-muted-foreground text-xs">Upload audio to generate waveform</p>
           </div>
         )}
       </div>

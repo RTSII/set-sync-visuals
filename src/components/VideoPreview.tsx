@@ -33,8 +33,6 @@ const VideoPreview = () => {
 
   const [clipDisplayDuration, setClipDisplayDuration] = React.useState(0);
   const [isBuffering, setIsBuffering] = React.useState(false);
-  const [bufferLevel, setBufferLevel] = React.useState(0);
-  const [loadingProgress, setLoadingProgress] = React.useState(0);
   const isTransitioning = React.useRef(false);
   const transitionTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -47,14 +45,6 @@ const VideoPreview = () => {
       const videoCurrentTime = videoRef.current.currentTime;
       const clipStartTime = selectedClip.startTime ?? 0;
       const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
-
-      // Update buffer level monitoring
-      if (videoRef.current.buffered.length > 0) {
-        const bufferedEnd = videoRef.current.buffered.end(videoRef.current.buffered.length - 1);
-        const duration = videoRef.current.duration || 1;
-        const bufferPercent = Math.min(100, (bufferedEnd / duration) * 100);
-        setBufferLevel(bufferPercent);
-      }
 
       if (clipEndTime && videoCurrentTime >= clipEndTime - 0.02) {
         console.log("🎬 TIME-UPDATE: Clip reached end, triggering seamless transition");
@@ -190,7 +180,7 @@ const VideoPreview = () => {
               onLoadedMetadata={handleLoadedMetadata}
               onEnded={handleVideoEnded}
               onClick={togglePlay}
-              preload="auto"
+              preload="metadata"
               playsInline
               muted={false}
               key={selectedClip.id}
@@ -201,70 +191,26 @@ const VideoPreview = () => {
               onCanPlayThrough={() => {
                 console.log("🎬 BUFFER: Video ready to play through");
                 setIsBuffering(false);
-                setLoadingProgress(100);
               }}
-              onLoadStart={() => {
-                console.log("🎬 BUFFER: Video load started");
-                setLoadingProgress(0);
-                setBufferLevel(0);
-              }}
-              onProgress={() => {
-                if (videoRef.current && videoRef.current.buffered.length > 0) {
-                  const bufferedEnd = videoRef.current.buffered.end(videoRef.current.buffered.length - 1);
-                  const duration = videoRef.current.duration || 1;
-                  const progress = Math.min(100, (bufferedEnd / duration) * 100);
-                  setLoadingProgress(progress);
-                  console.log("🎬 BUFFER: Video loading progress:", progress + "%");
-                }
-              }}
-              onCanPlay={() => {
-                console.log("🎬 BUFFER: Video can start playing");
-                setLoadingProgress(75);
-              }}
+              onLoadStart={() => console.log("🎬 BUFFER: Video load started")}
+              onProgress={() => console.log("🎬 BUFFER: Video loading progress")}
             />
             {/* Loading/Buffering Indicator */}
-            {(isBuffering || loadingProgress < 100) && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/50">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <div className="text-white text-xs font-medium">
-                    {isBuffering ? 'Buffering...' : `Loading ${Math.round(loadingProgress)}%`}
-                  </div>
-                  {loadingProgress > 0 && (
-                    <div className="w-24 h-1 bg-white/20 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-white transition-all duration-300" 
-                        style={{ width: `${loadingProgress}%` }}
-                      />
-                    </div>
-                  )}
-                </div>
+            {isBuffering && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
               </div>
             )}
             
-            {/* Buffer Status Indicator */}
+            {/* Preload Status Indicator */}
             {selectedClip && (
-              <div className="absolute top-2 right-2 flex flex-col items-end gap-1 text-xs text-white/70 bg-black/50 px-2 py-1 rounded">
-                <div className="flex items-center gap-1">
-                  <div className={`w-2 h-2 rounded-full ${isPreloaded(selectedClip.id) ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
-                  {isPreloaded(selectedClip.id) ? 'Ready' : 'Loading'}
-                </div>
-                {bufferLevel > 0 && (
-                  <div className="flex items-center gap-1">
-                    <span>Buffer:</span>
-                    <div className="w-12 h-1 bg-white/20 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-green-400 transition-all duration-300" 
-                        style={{ width: `${bufferLevel}%` }}
-                      />
-                    </div>
-                    <span>{Math.round(bufferLevel)}%</span>
-                  </div>
-                )}
+              <div className="absolute top-2 right-2 flex items-center gap-1 text-xs text-white/70 bg-black/50 px-2 py-1 rounded">
+                <div className={`w-2 h-2 rounded-full ${isPreloaded(selectedClip.id) ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                {isPreloaded(selectedClip.id) ? 'Ready' : 'Loading'}
               </div>
             )}
 
-            {shouldShowPlayButton && !isBuffering && loadingProgress >= 75 && (
+            {shouldShowPlayButton && !isBuffering && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <Button
                   size="icon"

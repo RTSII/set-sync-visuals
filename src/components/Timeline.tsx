@@ -249,37 +249,33 @@ const Timeline = () => {
           </div>
         )}
         <div
-          className="relative min-w-[600px] min-h-[280px] overflow-x-auto overflow-y-hidden cursor-pointer bg-background/30 border border-border/30 rounded-lg p-4"
+          className="relative min-w-[600px] h-full overflow-x-auto overflow-y-hidden cursor-pointer bg-background/30 border border-border/30 rounded-lg"
           onDrop={handleDropOnTimeline}
           onDragOver={(e) => e.preventDefault()}
           onClick={handleTimelineClick}
           ref={timelineContainerRef}
         >
+          <TimelineRuler />
+
           {/* Enhanced playhead with scrubbing capability */}
           <div 
-            className="absolute top-0 bottom-0 w-0.5 bg-primary z-30 shadow-lg cursor-ew-resize" 
+            className="absolute top-4 bottom-0 w-0.5 bg-primary z-30 shadow-lg cursor-ew-resize" 
             style={{ left: playheadPosition }}
             onMouseDown={handleProgressBarMouseDown}
           >
-            <div className="h-3 w-3 rounded-full bg-primary border-2 border-background absolute -top-1 -translate-x-1/2 shadow-lg cursor-grab active:cursor-grabbing"></div>
+            <div className="h-2 w-2 rounded-full bg-primary border-2 border-background absolute -top-1 -translate-x-1/2 shadow-lg cursor-grab active:cursor-grabbing"></div>
             <div className="absolute top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-primary/80 to-primary/60"></div>
           </div>
 
           {/* Tracks */}
-          <div className="space-y-4 pt-4">
+          <div className="space-y-1 mt-1">
+            <AudioTrack duration={duration} setDraggingMarkerIndex={setDraggingMarkerIndex} />
             <VideoTrack
               dragItem={dragItem}
               dragOverItem={dragOverItem}
               handleTimelineDragSort={handleTimelineDragSort}
               handleToggleTransition={handleToggleTransition}
             />
-            
-            {/* Timeline ruler positioned between video clips and audio waveform */}
-            <div className="px-2">
-              <TimelineRuler />
-            </div>
-            
-            <AudioTrack duration={duration} setDraggingMarkerIndex={setDraggingMarkerIndex} />
           </div>
         </div>
       </CardContent>

@@ -18,7 +18,7 @@ interface ThumbnailCache {
 
 const PIXELS_PER_SECOND = 10;
 const MIN_CLIP_DURATION = 0.5;
-const STANDARD_CLIP_WIDTH = 120;
+const STANDARD_CLIP_WIDTH = 80;
 
 const VideoTrack: React.FC<VideoTrackProps> = ({
   dragItem,
@@ -176,13 +176,11 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
   }
 
   return (
-    <div className="relative">
-      <div className="flex items-center gap-2 mb-2">
-        <Video className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground font-medium">Video Clips</span>
+    <div className="h-8 bg-secondary/30 rounded-md p-1 flex items-center gap-0.5">
+      <div className="w-4 h-full flex items-center justify-center bg-muted rounded flex-shrink-0">
+        <Video className="h-2 w-2 text-foreground" />
       </div>
-      <div className="min-h-[100px] bg-secondary/30 rounded-md p-3 flex items-center gap-2 overflow-x-auto">
-        <div className="flex items-center gap-2">
+      <div className="flex-1 h-full flex items-center gap-0.5">
         {timelineClips.map((clip, index) => (
           <React.Fragment key={clip.id}>
             {/* Show transition button only if the clip has a transition */}
@@ -199,17 +197,11 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
               </div>
             )}
             <div
-              className="relative flex-shrink-0 group"
+              className="relative h-full flex-shrink-0 group"
               style={{ width: `${STANDARD_CLIP_WIDTH}px` }}
             >
               <div
-                className={`w-full h-20 rounded-md relative overflow-hidden cursor-pointer active:cursor-grabbing border-2 transition-all ${
-                  dragItem.current === index 
-                    ? 'border-accent bg-accent/10 shadow-lg scale-105' 
-                    : selectedClip?.id === clip.id && !trimmingClipId 
-                      ? 'border-primary bg-primary/20' 
-                      : 'border-border bg-card'
-                } hover:border-primary/50 hover:shadow-md`}
+                className={`w-full h-full rounded-sm relative overflow-hidden cursor-pointer active:cursor-grabbing border-2 ${selectedClip?.id === clip.id && !trimmingClipId ? 'border-primary bg-primary/20' : 'border-muted bg-muted'} hover:bg-primary/10 transition-colors`}
                 draggable
                 onClick={() => setSelectedClip(clip)}
                 onDoubleClick={(e) => handleDoubleClick(e, clip.id)}
@@ -223,22 +215,20 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
                   <img
                     src={thumbnailCache[clip.id]}
                     alt={clip.file.name}
-                    className="w-full h-full object-cover rounded-sm"
+                    className="w-full h-full object-cover"
                     onError={() => {
                       console.error(`Failed to load thumbnail for clip: ${clip.id}`);
                       setThumbnailCache(prev => ({ ...prev, [clip.id]: "data:," }));
                     }}
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-muted/50 rounded-sm">
-                    <Video className="h-6 w-6 text-muted-foreground" />
+                  <div className="w-full h-full flex items-center justify-center bg-muted/50">
+                    <Video className="h-3 w-3 text-muted-foreground" />
                   </div>
                 )}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1">
-                  <p className="text-xs text-white truncate font-medium">
-                    {clip.file.name}
-                  </p>
-                </div>
+                <p className="absolute bottom-0 left-0 text-[6px] text-foreground bg-background/80 px-0.5 rounded-sm truncate pointer-events-none max-w-full">
+                  {clip.file.name}
+                </p>
                 {/* Add transition button - only show on hover if no transition exists */}
                 {index > 0 && !clip.transition && (
                   <div
@@ -280,7 +270,6 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
             </div>
           </React.Fragment>
         ))}
-        </div>
       </div>
     </div>
   );
