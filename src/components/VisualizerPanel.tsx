@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Play, Pause, Download, AudioWaveform } from 'lucide-react';
+import { Play, Pause, Download, AudioWaveform, Video, Layers } from 'lucide-react';
 import { VisualizerCanvas } from './visualizers/VisualizerCanvas';
 import { useAudioAnalysis } from '@/hooks/useAudioAnalysis';
 import { useEditorStore } from '@/lib/store';
@@ -22,7 +22,10 @@ export const VisualizerPanel: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   
-  const { audioFile, isPlaying, setIsPlaying } = useEditorStore();
+  const [selectedClip, setSelectedClip] = useState<string | null>(null);
+  const [effectOpacity, setEffectOpacity] = useState(0.8);
+  
+  const { audioFile, isPlaying, setIsPlaying, timelineClips } = useEditorStore();
   const audioData = useAudioAnalysis(audioRef.current);
 
   useEffect(() => {
@@ -220,16 +223,108 @@ export const VisualizerPanel: React.FC = () => {
       {/* Visualizer Canvas */}
       <Card>
         <CardContent className="p-0">
-          <div className="aspect-video w-full">
+          <div className="aspect-video w-full relative">
             <VisualizerCanvas 
               audioData={audioData} 
               effect={selectedEffect}
               width={800}
               height={450}
             />
+            {/* Layer selected video clip if available */}
+            {selectedClip && (
+              <div 
+                className="absolute inset-0 pointer-events-none"
+                style={{ opacity: effectOpacity }}
+              >
+                <video
+                  className="w-full h-full object-cover"
+                  src={timelineClips.find(clip => clip.id === selectedClip)?.src}
+                  muted
+                  loop
+                  autoPlay
+                />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Layer Effect Controls */}
+      {selectedClip && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Layers className="w-5 h-5" />
+              Layer Effects
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Effect Opacity</label>
+              <Slider
+                value={[effectOpacity]}
+                onValueChange={(value) => setEffectOpacity(value[0])}
+                max={1}
+                min={0}
+                step={0.1}
+                className="w-full"
+              />
+              <div className="text-xs text-muted-foreground">
+                {Math.round(effectOpacity * 100)}% - Mix visualizer with video
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Video Clips Section */}
+      {timelineClips.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Video className="w-5 h-5" />
+              Loaded Video Clips
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {timelineClips.map((clip) => (
+                <div
+                  key={clip.id}
+                  className={`relative cursor-pointer border-2 rounded-lg overflow-hidden transition-all hover:scale-105 ${
+                    selectedClip === clip.id 
+                      ? 'border-primary ring-2 ring-primary/20' 
+                      : 'border-muted hover:border-primary/50'
+                  }`}
+                  onClick={() => setSelectedClip(selectedClip === clip.id ? null : clip.id)}
+                >
+                  <div className="aspect-video bg-muted">
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Video className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                    <div className="text-xs font-medium text-white truncate">
+                      {clip.file?.name || 'Untitled Clip'}
+                    </div>
+                    <div className="text-xs text-gray-300">
+                      {clip.originalDuration ? `${clip.originalDuration.toFixed(1)}s` : 'No duration'}
+                    </div>
+                  </div>
+                  {selectedClip === clip.id && (
+                    <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
+                      <Layers className="w-3 h-3" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 text-sm text-muted-foreground">
+              Click on a video clip to layer it with the visualizer effects. Adjust opacity to blend.
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Hidden audio element */}
       <audio
