@@ -51,10 +51,10 @@ const AudioTrack: React.FC<AudioTrackProps> = ({ duration, setDraggingMarkerInde
         <AudioWaveform className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm text-muted-foreground font-medium">Audio Track</span>
       </div>
-      <div className="h-20 bg-secondary/30 border border-border/30 rounded-md relative">
+      <div className="h-32 bg-secondary/30 border border-border/30 rounded-md relative">
         {waveform.length > 0 ? (
           <>
-            <canvas ref={canvasRef} className="w-full h-full rounded-md" width="1200" height="80"></canvas>
+            <canvas ref={canvasRef} className="w-full h-full rounded-md" width="1200" height="128"></canvas>
             {audioMarkers.map((markerTime, index) => {
               const markerPosition = duration > 0 ? `${(markerTime / duration) * 100}%` : '0%';
               return (
