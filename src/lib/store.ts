@@ -161,17 +161,35 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   
   loadAudio: async (file: File) => {
     const audioUrl = URL.createObjectURL(file);
-    set({ 
-      audioFile: file,
-      audioUrl,
-      audioSrc: audioUrl 
-    });
     
-    // Generate basic waveform data
-    const mockWaveform = Array.from({ length: 100 }, () => Math.random());
-    set({ 
-      waveform: mockWaveform,
-      waveformData: mockWaveform 
+    // Create audio element to get duration
+    const audio = new Audio(audioUrl);
+    
+    // Wait for metadata to load to get duration
+    await new Promise((resolve) => {
+      audio.addEventListener('loadedmetadata', () => {
+        const audioDuration = audio.duration;
+        set({ 
+          audioFile: file,
+          audioUrl,
+          audioSrc: audioUrl,
+          duration: audioDuration
+        });
+        
+        // Generate basic waveform data
+        const mockWaveform = Array.from({ length: 100 }, () => Math.random() * 0.8 + 0.1);
+        set({ 
+          waveform: mockWaveform,
+          waveformData: mockWaveform 
+        });
+        
+        resolve(true);
+      });
+      
+      audio.addEventListener('error', () => {
+        console.error('Error loading audio file');
+        resolve(false);
+      });
     });
   },
   
