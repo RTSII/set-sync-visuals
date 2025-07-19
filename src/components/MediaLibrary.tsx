@@ -12,6 +12,7 @@ const MediaLibrary = () => {
   const audioInputRef = useRef<HTMLInputElement>(null);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
+  const [draggingClipId, setDraggingClipId] = useState<string | null>(null);
   const { addClipToTimeline, loadAudio, setSelectedClip, timelineClips } = useEditorStore();
 
   const generateThumbnail = (clip: MediaClip): Promise<string> => {
@@ -132,7 +133,12 @@ const MediaLibrary = () => {
 
   const handleClipDragStart = (e: React.DragEvent<HTMLDivElement>, clip: MediaClip, index: number) => {
     dragItem.current = index;
+    setDraggingClipId(clip.id);
     e.dataTransfer.setData("application/rvj-clip", JSON.stringify(clip));
+    // Remove default drag image (circle with line through)
+    const emptyImg = new Image();
+    emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
+    e.dataTransfer.setDragImage(emptyImg, 0, 0);
   };
 
   const handleClipClick = (e: React.MouseEvent, clip: MediaClip) => {
@@ -157,12 +163,21 @@ const MediaLibrary = () => {
               {mediaClips.map((clip, index) => (
                 <div
                   key={clip.id}
-                  className={`relative aspect-video bg-muted rounded border-2 ${isClipInTimeline(clip.src) ? 'border-[hsl(var(--fuscia))] bg-[hsl(var(--fuscia))]/10' : 'border-transparent'} hover:border-primary transition-colors cursor-pointer group`}
+                  className={`relative aspect-video bg-muted rounded border-2 ${
+                    isClipInTimeline(clip.src) 
+                      ? 'border-[hsl(var(--fuscia))] bg-[hsl(var(--fuscia))]/10' 
+                      : draggingClipId === clip.id 
+                        ? 'border-primary bg-primary/10' 
+                        : 'border-transparent'
+                  } hover:border-primary transition-colors cursor-pointer group`}
                   draggable
                   onClick={(e) => handleClipClick(e, clip)}
                   onDragStart={(e) => handleClipDragStart(e, clip, index)}
                   onDragEnter={() => (dragOverItem.current = index)}
-                  onDragEnd={handleDragSort}
+                  onDragEnd={() => {
+                    handleDragSort();
+                    setDraggingClipId(null);
+                  }}
                   onDragOver={(e) => e.preventDefault()}
                 >
                   {thumbnailCache[clip.id] && thumbnailCache[clip.id] !== "data:," ? (

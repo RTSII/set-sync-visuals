@@ -25,7 +25,7 @@ export const VisualizerPanel: React.FC = () => {
   const [selectedClip, setSelectedClip] = useState<string | null>(null);
   const [effectOpacity, setEffectOpacity] = useState(0.8);
   
-  const { audioFile, isPlaying, setIsPlaying, timelineClips } = useEditorStore();
+  const { audioFile, isPlaying, setIsPlaying, timelineClips, removeClip } = useEditorStore();
   const audioData = useAudioAnalysis(audioRef.current);
 
   useEffect(() => {
@@ -256,30 +256,62 @@ export const VisualizerPanel: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Layer Effect Controls */}
-      {selectedClip && (
+      {/* Video Clip Selection for Layering */}
+      {timelineClips.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Layers className="w-5 h-5" />
-              Layer Effects
+              <Video className="w-5 h-5" />
+              Layer Video Clip
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Effect Opacity</label>
-              <Slider
-                value={[effectOpacity]}
-                onValueChange={(value) => setEffectOpacity(value[0])}
-                max={1}
-                min={0}
-                step={0.1}
-                className="w-full"
-              />
-              <div className="text-xs text-muted-foreground">
-                {Math.round(effectOpacity * 100)}% - Mix visualizer with video
+              <label className="text-sm font-medium">Select Clip to Layer</label>
+              <div className="grid grid-cols-3 gap-2">
+                {timelineClips.map((clip) => (
+                  <div
+                    key={clip.id}
+                    className={`relative aspect-video bg-muted rounded border-2 cursor-pointer transition-colors ${
+                      selectedClip === clip.id 
+                        ? 'border-primary bg-primary/20' 
+                        : 'border-transparent hover:border-primary/50'
+                    }`}
+                    onClick={() => setSelectedClip(selectedClip === clip.id ? null : clip.id)}
+                  >
+                    <video
+                      className="w-full h-full object-cover rounded"
+                      src={clip.file ? URL.createObjectURL(clip.file) : undefined}
+                      muted
+                      preload="metadata"
+                    />
+                    <div className="absolute inset-0 bg-black/20 rounded flex items-center justify-center">
+                      <div className="w-4 h-4 rounded-full border-2 border-white bg-black/50 flex items-center justify-center">
+                        {selectedClip === clip.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
+            
+            {/* Layer Effect Controls */}
+            {selectedClip && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Effect Opacity</label>
+                <Slider
+                  value={[effectOpacity]}
+                  onValueChange={(value) => setEffectOpacity(value[0])}
+                  max={1}
+                  min={0}
+                  step={0.1}
+                  className="w-full"
+                />
+                <div className="text-xs text-muted-foreground">
+                  {Math.round(effectOpacity * 100)}% - Mix visualizer with video
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

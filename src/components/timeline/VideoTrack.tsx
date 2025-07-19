@@ -26,8 +26,9 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
   handleTimelineDragSort,
   handleToggleTransition,
 }) => {
-  const { timelineClips, selectedClip, setSelectedClip, trimmingClipId, setTrimmingClipId, updateClip } = useEditorStore();
+  const { timelineClips, selectedClip, setSelectedClip, trimmingClipId, setTrimmingClipId, updateClip, removeClip } = useEditorStore();
   const [draggingHandle, setDraggingHandle] = useState<'left' | 'right' | null>(null);
+  const [draggingClipId, setDraggingClipId] = useState<string | null>(null);
   const dragClipRef = useRef<MediaClip | null>(null);
   const dragStartRef = useRef({ x: 0, startTime: 0, endTime: 0 });
   const [thumbnailCache, setThumbnailCache] = useState<ThumbnailCache>({});
@@ -173,7 +174,22 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
   const handleDoubleClick = (e: React.MouseEvent, clipId: string) => {
     e.stopPropagation();
     setTrimmingClipId(trimmingClipId === clipId ? null : clipId);
-  }
+  };
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedClip) {
+          e.preventDefault();
+          removeClip(selectedClip.id);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedClip, removeClip]);
 
   return (
     <div className="h-8 bg-secondary/30 rounded-md p-1 flex items-center gap-0.5">
@@ -201,13 +217,25 @@ const VideoTrack: React.FC<VideoTrackProps> = ({
               style={{ width: `${STANDARD_CLIP_WIDTH}px` }}
             >
               <div
-                className={`w-full h-full rounded-sm relative overflow-hidden cursor-pointer active:cursor-grabbing border-2 ${selectedClip?.id === clip.id && !trimmingClipId ? 'border-primary bg-primary/20' : 'border-muted bg-muted'} hover:bg-primary/10 transition-colors`}
+                className={`w-full h-full rounded-sm relative overflow-hidden cursor-pointer active:cursor-grabbing border-2 ${
+                  selectedClip?.id === clip.id && !trimmingClipId 
+                    ? 'border-primary bg-primary/20' 
+                    : draggingClipId === clip.id 
+                      ? 'border-primary bg-primary/10' 
+                      : 'border-muted bg-muted'
+                } hover:bg-primary/10 transition-colors`}
                 draggable
                 onClick={() => setSelectedClip(clip)}
                 onDoubleClick={(e) => handleDoubleClick(e, clip.id)}
-                onDragStart={() => (dragItem.current = index)}
+                onDragStart={() => {
+                  dragItem.current = index;
+                  setDraggingClipId(clip.id);
+                }}
+                onDragEnd={() => {
+                  handleTimelineDragSort();
+                  setDraggingClipId(null);
+                }}
                 onDragEnter={() => (dragOverItem.current = index)}
-                onDragEnd={handleTimelineDragSort}
                 onDragOver={(e) => e.stopPropagation()}
               >
                 {/* Show thumbnail if available, otherwise show video icon */}
