@@ -233,15 +233,22 @@ export const VisualizerPanel: React.FC = () => {
             {/* Layer selected video clip if available */}
             {selectedClip && (
               <div 
-                className="absolute inset-0 pointer-events-none"
+                className="absolute inset-0 pointer-events-none mix-blend-screen"
                 style={{ opacity: effectOpacity }}
               >
                 <video
                   className="w-full h-full object-cover"
-                  src={timelineClips.find(clip => clip.id === selectedClip)?.src}
+                  src={timelineClips.find(clip => clip.id === selectedClip)?.file ? 
+                    URL.createObjectURL(timelineClips.find(clip => clip.id === selectedClip)!.file!) : 
+                    undefined}
                   muted
                   loop
                   autoPlay
+                  playsInline
+                  onLoadedData={(e) => {
+                    const video = e.currentTarget;
+                    video.play().catch(console.warn);
+                  }}
                 />
               </div>
             )}

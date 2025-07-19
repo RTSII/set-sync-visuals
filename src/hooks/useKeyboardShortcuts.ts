@@ -4,7 +4,7 @@ import { useEditorStore } from '@/lib/store';
 import { useEditor } from '@/context/EditorContext';
 
 export const useKeyboardShortcuts = () => {
-  const { selectedClip, isPlaying } = useEditorStore();
+  const { selectedClip, isPlaying, removeClip } = useEditorStore();
   const { togglePlay, videoRef } = useEditor();
 
   useEffect(() => {
@@ -51,10 +51,17 @@ export const useKeyboardShortcuts = () => {
             );
           }
           break;
+        case 'Delete':
+        case 'Backspace':
+          event.preventDefault();
+          if (selectedClip) {
+            removeClip(selectedClip.id);
+          }
+          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [selectedClip, isPlaying, togglePlay, videoRef]);
+  }, [selectedClip, isPlaying, togglePlay, videoRef, removeClip]);
 };
