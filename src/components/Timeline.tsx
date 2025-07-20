@@ -244,7 +244,6 @@ const Timeline = () => {
   return (
     <Card className="flex flex-col h-full bg-card/50 border border-border/50 shadow-sm overflow-hidden">
       {audioSrc && <audio ref={audioRef} src={audioSrc} />}
-      <TimelineControls handleExport={handleExport} />
       <CardContent className="p-3 pt-2 flex-1 min-h-0 overflow-hidden">
         {isExporting && (
           <div className="mb-3 p-3 bg-secondary/20 border border-border/30 rounded-lg space-y-2">
@@ -260,33 +259,41 @@ const Timeline = () => {
           onClick={handleTimelineClick}
           ref={timelineContainerRef}
         >
-          <TimelineRuler />
-
-          {/* Enhanced playhead with scrubbing capability */}
-          <div 
-            className="absolute top-4 bottom-0 w-0.5 bg-primary z-30 shadow-lg cursor-ew-resize" 
-            style={{ left: playheadPosition }}
-            onMouseDown={handleProgressBarMouseDown}
-          >
-            <div className="h-2 w-2 rounded-full bg-primary border-2 border-background absolute -top-1 -translate-x-1/2 shadow-lg cursor-grab active:cursor-grabbing"></div>
-            <div className="absolute top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-primary/80 to-primary/60"></div>
-          </div>
-
           {/* Enhanced Waveform Overlay - Always show when audioBuffer exists */}
           {audioBuffer && (
-            <div className="absolute top-4 left-4 right-4 h-16 pointer-events-none z-20 bg-background/10 rounded border border-primary/20">
+            <div className="absolute top-4 left-4 right-4 h-20 pointer-events-none z-20 bg-background/10 rounded border border-primary/20">
               <WaveformVisualizer audioBuffer={audioBuffer} />
             </div>
           )}
-          {/* Tracks */}
-          <div className="space-y-1 mt-1">
-            <AudioTrack duration={duration} setDraggingMarkerIndex={setDraggingMarkerIndex} />
+
+          {/* Video Track - Expanded height */}
+          <div className="mt-1 h-24">
             <VideoTrack
               dragItem={dragItem}
               dragOverItem={dragOverItem}
               handleTimelineDragSort={handleTimelineDragSort}
               handleToggleTransition={handleToggleTransition}
             />
+          </div>
+
+          {/* Time Ruler - Positioned between video and audio tracks */}
+          <div className="relative">
+            <TimelineRuler />
+            
+            {/* Enhanced playhead with scrubbing capability - Centered over time ruler */}
+            <div 
+              className="absolute top-0 bottom-0 w-0.5 bg-primary z-30 shadow-lg cursor-ew-resize" 
+              style={{ left: playheadPosition }}
+              onMouseDown={handleProgressBarMouseDown}
+            >
+              <div className="h-2 w-2 rounded-full bg-primary border-2 border-background absolute top-1/2 -translate-y-1/2 -translate-x-1/2 shadow-lg cursor-grab active:cursor-grabbing"></div>
+              <div className="absolute top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-primary/80 to-primary/60"></div>
+            </div>
+          </div>
+
+          {/* Audio Track - Expanded height */}
+          <div className="h-20">
+            <AudioTrack duration={duration} setDraggingMarkerIndex={setDraggingMarkerIndex} />
           </div>
         </div>
       </CardContent>
