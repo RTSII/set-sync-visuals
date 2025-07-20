@@ -1,13 +1,13 @@
-export const streamFileToChunks = async (file: File): Promise<Uint8Array[]> => {
+export async function streamFileToChunks(file: File, chunkSize = 1024 * 1024): Promise<Uint8Array[]> { // 1MB chunks
   const chunks: Uint8Array[] = [];
-  const chunkSize = 1024 * 1024; // 1MB chunks
-  
-  for (let start = 0; start < file.size; start += chunkSize) {
-    const end = Math.min(start + chunkSize, file.size);
-    const chunk = file.slice(start, end);
-    const arrayBuffer = await chunk.arrayBuffer();
-    chunks.push(new Uint8Array(arrayBuffer));
+  const stream = file.stream();
+  const reader = stream.getReader();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
   }
-  
+
   return chunks;
-};
+}
