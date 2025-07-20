@@ -1,12 +1,36 @@
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile } from '@ffmpeg/util';
+// Use dynamic imports for web worker compatibility
+let FFmpeg: any;
+let fetchFile: any;
 
-const ffmpeg = new FFmpeg();
+// Initialize FFmpeg dynamically
+const initFFmpeg = async () => {
+  if (!FFmpeg) {
+    const ffmpegModule = await import('@ffmpeg/ffmpeg');
+    const utilModule = await import('@ffmpeg/util');
+    FFmpeg = ffmpegModule.FFmpeg;
+    fetchFile = utilModule.fetchFile;
+  }
+};
+
+let ffmpeg: any;
+
+
 
 self.onmessage = async (e: MessageEvent) => {
   const { chunks, fileType } = e.data;
 
   try {
+    // Initialize FFmpeg if not already done
+    await initFFmpeg();
+    
+    if (!ffmpeg) {
+      ffmpeg = new FFmpeg();
+    }
+
+    if (!ffmpeg.loaded) {
+      self.postMessage({ error: 'FFmpeg loading failed. This feature requires FFmpeg which may not be available in this environment.' });
+      return;
+    }
     if (!ffmpeg.loaded) {
       await ffmpeg.load();
     }

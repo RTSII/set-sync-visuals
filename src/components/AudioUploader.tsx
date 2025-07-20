@@ -30,9 +30,9 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({ onProcessed, onVisualize 
     if (!file) return;
     setStatus('Processing... (This may take 30-60s for large files)');
 
-    // Initialize Web Worker
+    // Initialize Web Worker with simpler processing
     if (!workerRef.current) {
-      workerRef.current = new Worker(new URL('@/workers/preprocessWorker.ts', import.meta.url));
+      workerRef.current = new Worker(new URL('@/workers/simpleAudioWorker.ts', import.meta.url), { type: 'module' });
       workerRef.current.onmessage = (e) => {
         if (e.data.error) {
           setStatus(`Error: ${e.data.error}`);
