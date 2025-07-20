@@ -12,7 +12,6 @@ interface AudioUploaderProps {
 const AudioUploader: React.FC<AudioUploaderProps> = ({ onProcessed, onVisualize }) => {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string>('Upload an MP3 or WAV file (up to 300MB)');
-  const workerRef = useRef<Worker | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -28,29 +27,64 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({ onProcessed, onVisualize 
 
   const handleProcess = async () => {
     if (!file) return;
-    setStatus('Processing... (This may take 30-60s for large files)');
-
-    // Initialize Web Worker with simpler processing
-    if (!workerRef.current) {
-      workerRef.current = new Worker(new URL('@/workers/simpleAudioWorker.ts', import.meta.url), { type: 'module' });
-      workerRef.current.onmessage = (e) => {
-        if (e.data.error) {
-          setStatus(`Error: ${e.data.error}`);
-        } else {
-          const audioBuffer = e.data.audioBuffer as AudioBuffer;
-          onProcessed(audioBuffer);
-          if (onVisualize) onVisualize(audioBuffer); // Trigger visualization
-          setStatus('Processing complete. AudioBuffer ready for next step.');
-        }
-      };
-    }
+    setStatus('Processing... (Converting and analyzing audio)');
 
     try {
-      // Stream file to chunks and send to worker
+      console.log('🎵 AUDIO-DIRECT: Starting direct audio processing');
+      
+      // Stream file to chunks and process directly in main thread
       const chunks = await streamFileToChunks(file);
-      workerRef.current.postMessage({ chunks, fileType: file.type });
+      
+      // Combine chunks
+      let totalLength = 0;
+      for (const chunk of chunks) {
+        totalLength += chunk.length;
+      }
+      
+      const fullData = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const chunk of chunks) {
+        fullData.set(chunk, offset);
+        offset += chunk.length;
+      }
+      
+      console.log('🎵 AUDIO-DIRECT: Combined chunks, decoding audio...');
+      
+      // Create blob and decode using Web Audio API in main thread
+      const audioBlob = new Blob([fullData], { type: file.type });
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      console.log('🎵 AUDIO-DIRECT: Audio decoded successfully, duration:', audioBuffer.duration);
+      
+      // Apply simple normalization
+      const channelData = audioBuffer.getChannelData(0);
+      let maxAmplitude = 0;
+      
+      // Find peak amplitude
+      for (let i = 0; i < channelData.length; i++) {
+        maxAmplitude = Math.max(maxAmplitude, Math.abs(channelData[i]));
+      }
+      
+      // Normalize if needed (gentle normalization to 0.8 to avoid clipping)
+      if (maxAmplitude > 0.1) {
+        const normalizationFactor = 0.8 / maxAmplitude;
+        for (let i = 0; i < channelData.length; i++) {
+          channelData[i] *= normalizationFactor;
+        }
+        console.log('🎵 AUDIO-DIRECT: Applied normalization, factor:', normalizationFactor);
+      }
+      
+      // Process the audio buffer
+      onProcessed(audioBuffer);
+      if (onVisualize) onVisualize(audioBuffer);
+      setStatus('Processing complete. Enhanced waveform ready!');
+      
     } catch (err) {
-      setStatus(`Error streaming file: ${err.message}`);
+      console.error('🎵 AUDIO-DIRECT: Error:', err);
+      setStatus(`Error processing audio: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
