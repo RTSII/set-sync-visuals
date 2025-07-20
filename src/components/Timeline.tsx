@@ -16,6 +16,7 @@ import {
 } from './timeline';
 import AudioUploader from './AudioUploader';
 import WaveformVisualizer from './WaveformVisualizer';
+import { encodeWAV } from '@/lib/audioUtils';
 
 const Timeline = () => {
   const timelineContainerRef = useRef<HTMLDivElement>(null);
@@ -272,18 +273,43 @@ const Timeline = () => {
           </div>
 
           {/* Enhanced Audio Upload & Visualization */}
-          {!audioSrc && (
+          {!audioSrc && !audioBuffer && (
             <div className="absolute inset-4 flex items-center justify-center">
               <AudioUploader 
-                onProcessed={(buffer) => setAudioBuffer(buffer)}
-                onVisualize={(buffer) => console.log('Audio processed:', buffer)}
+                onProcessed={(buffer) => {
+                  setAudioBuffer(buffer);
+                  // Create audio blob URL for playback compatibility
+                  const audioContext = new AudioContext();
+                  const offlineContext = new OfflineAudioContext(
+                    buffer.numberOfChannels,
+                    buffer.length,
+                    buffer.sampleRate
+                  );
+                  const source = offlineContext.createBufferSource();
+                  source.buffer = buffer;
+                  source.connect(offlineContext.destination);
+                  source.start();
+                  
+                  offlineContext.startRendering().then(renderedBuffer => {
+                    // Convert audio buffer to playable blob
+                    const audioData = renderedBuffer.getChannelData(0);
+                    const wav = encodeWAV(audioData, renderedBuffer.sampleRate);
+                    const audioBlob = new Blob([wav], { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    
+                    // Update store with both buffer and playable URL
+                    useEditorStore.getState().setAudioSrc(audioUrl);
+                    useEditorStore.getState().loadAudio(new File([audioBlob], 'processed-audio.wav', { type: 'audio/wav' }));
+                  });
+                }}
+                onVisualize={(buffer) => console.log('Audio processed with enhanced waveform')}
               />
             </div>
           )}
 
           {/* Advanced Waveform Visualization */}
           {audioBuffer && (
-            <div className="absolute top-4 left-0 right-0 h-20 pointer-events-none">
+            <div className="absolute top-4 left-0 right-0 h-20 pointer-events-none opacity-80">
               <WaveformVisualizer audioBuffer={audioBuffer} />
             </div>
           )}

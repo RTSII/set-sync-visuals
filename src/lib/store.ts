@@ -38,6 +38,7 @@ interface EditorActions {
   setDuration: (duration: number) => void;
   setWaveformData: (waveformData: any[]) => void;
   setAudioUrl: (audioUrl: string | null) => void;
+  setAudioSrc: (audioSrc: string | null) => void;
   setZoomLevel: (zoomLevel: number) => void;
   
   // Additional actions needed by components
@@ -137,6 +138,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     audioUrl,
     audioSrc: audioUrl 
   }),
+  setAudioSrc: (audioSrc) => set({ audioSrc }),
   setZoomLevel: (zoomLevel) => set({ zoomLevel }),
   
   setTimelineClips: (clips) => set({ 
