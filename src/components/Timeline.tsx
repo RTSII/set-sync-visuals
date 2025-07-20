@@ -274,46 +274,49 @@ const Timeline = () => {
 
           {/* Enhanced Audio Upload & Visualization */}
           {!audioSrc && !audioBuffer && (
-            <div className="absolute inset-4 flex items-center justify-center">
-              <AudioUploader 
-                onProcessed={(buffer) => {
-                  setAudioBuffer(buffer);
-                  // Create audio blob URL for playback compatibility
-                  const audioContext = new AudioContext();
-                  const offlineContext = new OfflineAudioContext(
-                    buffer.numberOfChannels,
-                    buffer.length,
-                    buffer.sampleRate
-                  );
-                  const source = offlineContext.createBufferSource();
-                  source.buffer = buffer;
-                  source.connect(offlineContext.destination);
-                  source.start();
-                  
-                  offlineContext.startRendering().then(renderedBuffer => {
-                    // Convert audio buffer to playable blob
-                    const audioData = renderedBuffer.getChannelData(0);
-                    const wav = encodeWAV(audioData, renderedBuffer.sampleRate);
-                    const audioBlob = new Blob([wav], { type: 'audio/wav' });
-                    const audioUrl = URL.createObjectURL(audioBlob);
+            <div className="absolute inset-4 flex items-center justify-center z-10">
+              <div className="bg-background/90 p-6 rounded-lg border-2 border-dashed border-border">
+                <AudioUploader 
+                  onProcessed={(buffer) => {
+                    console.log('📈 AUDIO-ENHANCED: Processing AudioBuffer, duration:', buffer.duration);
+                    setAudioBuffer(buffer);
+                    // Create audio blob URL for playback compatibility
+                    const audioContext = new AudioContext();
+                    const offlineContext = new OfflineAudioContext(
+                      buffer.numberOfChannels,
+                      buffer.length,
+                      buffer.sampleRate
+                    );
+                    const source = offlineContext.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(offlineContext.destination);
+                    source.start();
                     
-                    // Update store with both buffer and playable URL
-                    useEditorStore.getState().setAudioSrc(audioUrl);
-                    useEditorStore.getState().loadAudio(new File([audioBlob], 'processed-audio.wav', { type: 'audio/wav' }));
-                  });
-                }}
-                onVisualize={(buffer) => console.log('Audio processed with enhanced waveform')}
-              />
+                    offlineContext.startRendering().then(renderedBuffer => {
+                      // Convert audio buffer to playable blob
+                      const audioData = renderedBuffer.getChannelData(0);
+                      const wav = encodeWAV(audioData, renderedBuffer.sampleRate);
+                      const audioBlob = new Blob([wav], { type: 'audio/wav' });
+                      const audioUrl = URL.createObjectURL(audioBlob);
+                      
+                      console.log('📈 AUDIO-ENHANCED: Created playable URL, setting audio source');
+                      // Update store with both buffer and playable URL
+                      useEditorStore.getState().setAudioSrc(audioUrl);
+                      useEditorStore.getState().loadAudio(new File([audioBlob], 'processed-audio.wav', { type: 'audio/wav' }));
+                    });
+                  }}
+                  onVisualize={(buffer) => console.log('📈 AUDIO-ENHANCED: Enhanced waveform ready')}
+                />
+              </div>
             </div>
           )}
 
-          {/* Advanced Waveform Visualization */}
+          {/* Enhanced Waveform Overlay */}
           {audioBuffer && (
-            <div className="absolute top-4 left-0 right-0 h-20 pointer-events-none opacity-80">
+            <div className="absolute top-4 left-4 right-4 h-16 pointer-events-none z-20 bg-background/10 rounded border border-primary/20">
               <WaveformVisualizer audioBuffer={audioBuffer} />
             </div>
           )}
-
           {/* Tracks */}
           <div className="space-y-1 mt-1">
             <AudioTrack duration={duration} setDraggingMarkerIndex={setDraggingMarkerIndex} />

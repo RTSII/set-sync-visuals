@@ -96,15 +96,18 @@ const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({ audioBuffer }) 
   }, [audioBuffer]);
 
   return (
-    <Card className="w-full max-w-lg">
-      <CardHeader>
-        <CardTitle>Waveform Visualizer</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <canvas ref={canvasRef} width={800} height={300} className="w-full" />
-        <p className="mt-2 text-sm">Bass (red-orange, thick), Mids (green, medium), Highs (blue, thin) with overall gradient.</p>
-      </CardContent>
-    </Card>
+    <div className="w-full h-full relative">
+      <canvas 
+        ref={canvasRef} 
+        width={1200} 
+        height={80} 
+        className="w-full h-full object-cover"
+        style={{ background: 'transparent' }}
+      />
+      <div className="absolute bottom-0 left-2 text-xs text-muted-foreground opacity-75">
+        Enhanced: Bass (red) · Mids (green) · Highs (blue)
+      </div>
+    </div>
   );
 };
 

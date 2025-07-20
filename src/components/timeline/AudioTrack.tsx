@@ -10,7 +10,7 @@ interface AudioTrackProps {
 
 const AudioTrack: React.FC<AudioTrackProps> = ({ duration, setDraggingMarkerIndex }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { waveform, audioMarkers } = useEditorStore();
+  const { waveform, audioMarkers, audioBuffer } = useEditorStore();
 
   useEffect(() => {
     console.log("AudioTrack render - waveform length:", waveform.length, "duration:", duration);
@@ -72,7 +72,11 @@ const AudioTrack: React.FC<AudioTrackProps> = ({ duration, setDraggingMarkerInde
           </>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-center p-1">
+            {audioBuffer ? (
+              <p className="text-muted-foreground text-xs">Enhanced waveform active (see overlay above)</p>
+            ) : (
               <p className="text-muted-foreground text-xs">Upload audio to generate waveform</p>
+            )}
           </div>
         )}
       </div>
