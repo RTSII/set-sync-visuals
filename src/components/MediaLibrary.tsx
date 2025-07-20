@@ -4,6 +4,8 @@ import { UploadCloud, Plus, Music, Video } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
 import { useEditorStore } from "@/lib/store";
 import { MediaClip } from "@/types";
+import AudioUploader from "./AudioUploader";
+import { encodeWAV } from "@/lib/audioUtils";
 
 const MediaLibrary = () => {
   const [mediaClips, setMediaClips] = useState<MediaClip[]>([]);
@@ -13,7 +15,7 @@ const MediaLibrary = () => {
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const [draggingClipId, setDraggingClipId] = useState<string | null>(null);
-  const { addClipToTimeline, loadAudio, setSelectedClip, timelineClips } = useEditorStore();
+  const { addClipToTimeline, loadAudio, setSelectedClip, timelineClips, setAudioBuffer, setAudioSrc } = useEditorStore();
 
   const generateThumbnail = (clip: MediaClip): Promise<string> => {
     return new Promise((resolve) => {
@@ -208,13 +210,43 @@ const MediaLibrary = () => {
       </CardContent>
       <CardFooter className="flex-col items-stretch gap-2 p-3 pt-1">
         <input type="file" ref={videoInputRef} onChange={handleVideoFileChange} accept="video/*" className="hidden" multiple />
-        <input type="file" ref={audioInputRef} onChange={handleAudioFileChange} accept="audio/*" className="hidden" />
         <Button className="w-full" onClick={handleUploadVideoClick}>
           <UploadCloud className="mr-2 h-4 w-4" /> Upload Video
         </Button>
-        <Button className="w-full" variant="secondary" onClick={handleUploadAudioClick}>
-          <Music className="mr-2 h-4 w-4" /> Upload Audio
-        </Button>
+        
+        {/* Enhanced Audio Upload */}
+        <div className="w-full">
+          <AudioUploader 
+            onProcessed={(buffer) => {
+              console.log('📈 ENHANCED-AUDIO: Processing audio buffer in MediaLibrary');
+              setAudioBuffer(buffer);
+              
+              // Create playable audio for video sync
+              const audioContext = new AudioContext();
+              const offlineContext = new OfflineAudioContext(
+                buffer.numberOfChannels,
+                buffer.length,
+                buffer.sampleRate
+              );
+              const source = offlineContext.createBufferSource();
+              source.buffer = buffer;
+              source.connect(offlineContext.destination);
+              source.start();
+              
+              offlineContext.startRendering().then(renderedBuffer => {
+                const audioData = renderedBuffer.getChannelData(0);
+                const wav = encodeWAV(audioData, renderedBuffer.sampleRate);
+                const audioBlob = new Blob([wav], { type: 'audio/wav' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                console.log('📈 ENHANCED-AUDIO: Setting audio source and file');
+                setAudioSrc(audioUrl);
+                loadAudio(new File([audioBlob], 'enhanced-audio.wav', { type: 'audio/wav' }));
+              });
+            }}
+            onVisualize={(buffer) => console.log('📈 ENHANCED-AUDIO: Enhanced waveform visualization ready')}
+          />
+        </div>
       </CardFooter>
     </Card>
   );

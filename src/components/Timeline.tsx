@@ -272,46 +272,7 @@ const Timeline = () => {
             <div className="absolute top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-primary/80 to-primary/60"></div>
           </div>
 
-          {/* Enhanced Audio Upload & Visualization */}
-          {!audioSrc && !audioBuffer && (
-            <div className="absolute inset-4 flex items-center justify-center z-10">
-              <div className="bg-background/90 p-6 rounded-lg border-2 border-dashed border-border">
-                <AudioUploader 
-                  onProcessed={(buffer) => {
-                    console.log('📈 AUDIO-ENHANCED: Processing AudioBuffer, duration:', buffer.duration);
-                    setAudioBuffer(buffer);
-                    // Create audio blob URL for playback compatibility
-                    const audioContext = new AudioContext();
-                    const offlineContext = new OfflineAudioContext(
-                      buffer.numberOfChannels,
-                      buffer.length,
-                      buffer.sampleRate
-                    );
-                    const source = offlineContext.createBufferSource();
-                    source.buffer = buffer;
-                    source.connect(offlineContext.destination);
-                    source.start();
-                    
-                    offlineContext.startRendering().then(renderedBuffer => {
-                      // Convert audio buffer to playable blob
-                      const audioData = renderedBuffer.getChannelData(0);
-                      const wav = encodeWAV(audioData, renderedBuffer.sampleRate);
-                      const audioBlob = new Blob([wav], { type: 'audio/wav' });
-                      const audioUrl = URL.createObjectURL(audioBlob);
-                      
-                      console.log('📈 AUDIO-ENHANCED: Created playable URL, setting audio source');
-                      // Update store with both buffer and playable URL
-                      useEditorStore.getState().setAudioSrc(audioUrl);
-                      useEditorStore.getState().loadAudio(new File([audioBlob], 'processed-audio.wav', { type: 'audio/wav' }));
-                    });
-                  }}
-                  onVisualize={(buffer) => console.log('📈 AUDIO-ENHANCED: Enhanced waveform ready')}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Enhanced Waveform Overlay */}
+          {/* Enhanced Waveform Overlay - Always show when audioBuffer exists */}
           {audioBuffer && (
             <div className="absolute top-4 left-4 right-4 h-16 pointer-events-none z-20 bg-background/10 rounded border border-primary/20">
               <WaveformVisualizer audioBuffer={audioBuffer} />
