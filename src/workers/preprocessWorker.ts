@@ -1,16 +1,17 @@
-import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg';
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile } from '@ffmpeg/util';
 
-const ffmpeg = createFFmpeg({ log: true });
+const ffmpeg = new FFmpeg();
 
 self.onmessage = async (e: MessageEvent) => {
   const { chunks, fileType } = e.data;
 
   try {
-    if (!ffmpeg.isLoaded()) {
+    if (!ffmpeg.loaded) {
       await ffmpeg.load();
     }
 
-    // Write chunks to FFmpeg FS
+    // Write chunks to FFmpeg filesystem
     const inputFile = 'input.' + (fileType === 'audio/mpeg' ? 'mp3' : 'wav');
     let fullData = new Uint8Array(0);
     for (const chunk of chunks) {
@@ -19,23 +20,37 @@ self.onmessage = async (e: MessageEvent) => {
       newData.set(chunk, fullData.length);
       fullData = newData;
     }
-    ffmpeg.FS('writeFile', inputFile, await fetchFile(fullData));
+    
+    // Write file using modern FFmpeg API
+    await ffmpeg.writeFile(inputFile, fullData);
 
-    // Preprocess: Decode to PCM, resample to 44.1kHz, normalize with loudnorm, preserve lows (low-shelf boost for 20-250Hz)
-    await ffmpeg.run(
+    // Preprocess: Decode to PCM, resample to 44.1kHz, normalize with loudnorm, preserve lows
+    await ffmpeg.exec([
       '-i', inputFile,
-      '-af', 'ashelf=type=lowshelf:frequency=100:gain=3:width_type=h:width=200, loudnorm=I=-16:TP=-1:LRA=11', // Low-shelf for electronic lows + loudnorm
-      '-ar', '44100', // Resample to 44.1kHz
-      '-f', 's16le', // PCM output
+      '-af', 'ashelf=type=lowshelf:frequency=100:gain=3:width_type=h:width=200, loudnorm=I=-16:TP=-1:LRA=11',
+      '-ar', '44100',
+      '-f', 's16le',
       'output.pcm'
-    );
+    ]);
 
-    const outputData = ffmpeg.FS('readFile', 'output.pcm');
+    const outputData = await ffmpeg.readFile('output.pcm');
+    
+    // Convert to AudioBuffer
+    const arrayBuffer = (outputData as Uint8Array).buffer;
     const audioContext = new (self.AudioContext || (self as any).webkitAudioContext)();
-    const audioBuffer = await audioContext.decodeAudioData(outputData.buffer);
+    
+    // Create buffer for PCM data (16-bit signed, 44.1kHz, mono)
+    const audioBuffer = audioContext.createBuffer(1, arrayBuffer.byteLength / 2, 44100);
+    const channelData = audioBuffer.getChannelData(0);
+    const pcmData = new Int16Array(arrayBuffer);
+    
+    // Convert PCM to float
+    for (let i = 0; i < pcmData.length; i++) {
+      channelData[i] = pcmData[i] / 32768.0;
+    }
 
     self.postMessage({ audioBuffer });
   } catch (err) {
-    self.postMessage({ error: err.message });
+    self.postMessage({ error: err instanceof Error ? err.message : 'Unknown error' });
   }
 };

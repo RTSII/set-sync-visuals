@@ -14,6 +14,8 @@ import {
   VideoTrack, 
   TimelineRuler 
 } from './timeline';
+import AudioUploader from './AudioUploader';
+import WaveformVisualizer from './WaveformVisualizer';
 
 const Timeline = () => {
   const timelineContainerRef = useRef<HTMLDivElement>(null);
@@ -38,6 +40,8 @@ const Timeline = () => {
     setAudioMarkers,
     selectedClip,
     absoluteTimelinePosition,
+    setAudioBuffer,
+    audioBuffer,
   } = useEditorStore();
 
   const dragItem = useRef<number | null>(null);
@@ -266,6 +270,23 @@ const Timeline = () => {
             <div className="h-2 w-2 rounded-full bg-primary border-2 border-background absolute -top-1 -translate-x-1/2 shadow-lg cursor-grab active:cursor-grabbing"></div>
             <div className="absolute top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-primary/80 to-primary/60"></div>
           </div>
+
+          {/* Enhanced Audio Upload & Visualization */}
+          {!audioSrc && (
+            <div className="absolute inset-4 flex items-center justify-center">
+              <AudioUploader 
+                onProcessed={(buffer) => setAudioBuffer(buffer)}
+                onVisualize={(buffer) => console.log('Audio processed:', buffer)}
+              />
+            </div>
+          )}
+
+          {/* Advanced Waveform Visualization */}
+          {audioBuffer && (
+            <div className="absolute top-4 left-0 right-0 h-20 pointer-events-none">
+              <WaveformVisualizer audioBuffer={audioBuffer} />
+            </div>
+          )}
 
           {/* Tracks */}
           <div className="space-y-1 mt-1">

@@ -19,6 +19,7 @@ interface EditorState {
   audioSrc: string | null;
   waveform: number[];
   audioFile: File | null;
+  audioBuffer: AudioBuffer | null;
   isExporting: boolean;
   exportProgress: number;
   audioMarkers: number[];
@@ -54,6 +55,7 @@ interface EditorActions {
   
   loadProject: (clips: TimelineClip[]) => void;
   clearTimeline: () => void;
+  setAudioBuffer: (buffer: AudioBuffer | null) => void;
 }
 
 interface EditorStore extends EditorState, EditorActions {}
@@ -74,6 +76,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   audioSrc: null,
   waveform: [],
   audioFile: null,
+  audioBuffer: null,
   isExporting: false,
   exportProgress: 0,
   audioMarkers: [],
@@ -222,5 +225,34 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     waveformData: [],
     waveform: [],
     audioMarkers: [],
+    audioBuffer: null,
+  }),
+
+  setAudioBuffer: (buffer: AudioBuffer | null) => set((state) => {
+    // Generate enhanced waveform data from audio buffer
+    if (buffer) {
+      const channelData = buffer.getChannelData(0);
+      const samples = buffer.sampleRate * buffer.duration;
+      const blockSize = Math.floor(samples / 1200); // More resolution for better visualization
+      const filteredData = [];
+      
+      for (let i = 0; i < 1200; i++) {
+        const blockStart = blockSize * i;
+        let sum = 0;
+        for (let j = 0; j < blockSize; j++) {
+          sum += Math.abs(channelData[blockStart + j] || 0);
+        }
+        filteredData.push(sum / blockSize);
+      }
+      
+      return {
+        audioBuffer: buffer,
+        waveform: filteredData,
+        duration: buffer.duration,
+        audioSrc: null, // Clear old audio src when new buffer is available
+      };
+    }
+    
+    return { audioBuffer: buffer };
   }),
 }));
