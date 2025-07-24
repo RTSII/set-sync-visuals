@@ -41,28 +41,12 @@ const VideoPreview = () => {
   const { isPreloaded } = useVideoPreloader(timelineClips, selectedClip?.id);
 
   const handleTimeUpdate = () => {
+    // Only handle time updates for display purposes - clip transitions are handled by hooks
     if (videoRef.current && selectedClip && !isTransitioning.current) {
       const videoCurrentTime = videoRef.current.currentTime;
       const clipStartTime = selectedClip.startTime ?? 0;
-      const clipEndTime = selectedClip.endTime ?? videoRef.current.duration;
-
-      if (clipEndTime && videoCurrentTime >= clipEndTime - 0.02) {
-        console.log("🎬 TIME-UPDATE: Clip reached end, triggering seamless transition");
-        isTransitioning.current = true;
-        
-        if (transitionTimeoutRef.current) {
-          clearTimeout(transitionTimeoutRef.current);
-        }
-        
-        handleClipEnded();
-        
-        transitionTimeoutRef.current = setTimeout(() => {
-          isTransitioning.current = false;
-        }, 500);
-      } else {
-        const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
-        setCurrentTime(relativeTime);
-      }
+      const relativeTime = Math.max(0, videoCurrentTime - clipStartTime);
+      setCurrentTime(relativeTime);
     }
   };
 
@@ -91,12 +75,7 @@ const VideoPreview = () => {
     }
   };
 
-  const handleVideoEnded = () => {
-    console.log("🎬 VIDEO-END: Video element ended event");
-    if (!isTransitioning.current) {
-      handleClipEnded();
-    }
-  };
+  // Video ended handler removed - clip transitions are handled by useClipTransition and useAudioTimeSync hooks
 
   // Enhanced clip change handler
   React.useEffect(() => {
@@ -178,7 +157,7 @@ const VideoPreview = () => {
               className="w-full h-full object-contain"
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
-              onEnded={handleVideoEnded}
+              
               onClick={togglePlay}
               preload="metadata"
               playsInline
