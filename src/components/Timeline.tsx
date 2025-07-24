@@ -17,6 +17,7 @@ import {
 import AudioUploader from './AudioUploader';
 import WaveformVisualizer from './WaveformVisualizer';
 import { encodeWAV } from '@/lib/audioUtils';
+import { AudioWaveform, MapPin } from 'lucide-react';
 
 const Timeline = () => {
   const timelineContainerRef = useRef<HTMLDivElement>(null);
@@ -259,12 +260,6 @@ const Timeline = () => {
           onClick={handleTimelineClick}
           ref={timelineContainerRef}
         >
-          {/* Enhanced Waveform Overlay - Always show when audioBuffer exists */}
-          {audioBuffer && (
-            <div className="absolute top-4 left-4 right-4 h-20 pointer-events-none z-20 bg-background/10 rounded border border-primary/20">
-              <WaveformVisualizer audioBuffer={audioBuffer} />
-            </div>
-          )}
 
           {/* Video Track - Expanded height */}
           <div className="mt-1 h-24">
@@ -291,9 +286,35 @@ const Timeline = () => {
             </div>
           </div>
 
-          {/* Audio Track - Expanded height */}
+          {/* Audio Track - Enhanced waveform */}
           <div className="h-20">
-            <AudioTrack duration={duration} setDraggingMarkerIndex={setDraggingMarkerIndex} />
+            {audioBuffer ? (
+              <div className="h-full bg-secondary/30 rounded-md p-1 flex items-center gap-1">
+                <div className="w-6 h-full flex items-center justify-center bg-muted rounded flex-shrink-0">
+                  <AudioWaveform className="h-3 w-3 text-foreground"/>
+                </div>
+                <div className="flex-1 h-full relative bg-muted/30 rounded">
+                  <WaveformVisualizer audioBuffer={audioBuffer} />
+                  {audioMarkers.map((markerTime, index) => {
+                    const markerPosition = duration > 0 ? `${(markerTime / duration) * 100}%` : '0%';
+                    return (
+                      <div
+                        key={index}
+                        className="absolute top-0 bottom-0 w-0.5 bg-yellow-400 z-20 cursor-ew-resize group"
+                        style={{ left: markerPosition }}
+                        onMouseDown={() => setDraggingMarkerIndex(index)}
+                      >
+                        <div className="absolute -top-1 -translate-x-1/2 bg-yellow-400 p-0.5 rounded-full ring-1 ring-background group-hover:scale-110 transition-transform">
+                          <MapPin className="h-2 w-2 text-background" fill="currentColor"/>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <AudioTrack duration={duration} setDraggingMarkerIndex={setDraggingMarkerIndex} />
+            )}
           </div>
         </div>
       </CardContent>
